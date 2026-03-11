@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "last_used": "interview_assistant",
+  "language": "en",
+  "templates": [
+    {
+      "id": "interview_assistant",
+      "name": "Interview Assistant",
+      "description": "General job interview helper with spoken-ready answers",
+      "version": 1,
+      "icon": "💼",
+      "system_instructions": "You are Interview Copilot. Write a ready-to-speak answer the candidate can read verbatim.",
+      "user_context_example": "Position: Backend Engineer\nCompany: Acme Corp\nStrengths: Python, APIs, distributed systems",
+      "is_builtin": true
+    },
+    {
+      "id": "leetcode_helper",
+      "name": "LeetCode Helper",
+      "description": "Competitive programming coach for coding interviews",
+      "version": 1,
+      "icon": "🧩",
+      "system_instructions": "You are a coding interview coach. Explain the approach, produce concise Python code, and summarize complexity.",
+      "user_context_example": "Preparing for: Google coding interview\nWeak areas: DP, graphs\nPreferred language: Python",
+      "is_builtin": true
+    },
+    {
+      "id": "sales_assistant",
+      "name": "Sales Assistant",
+      "description": "Help craft persuasive and concise sales responses",
+      "version": 1,
+      "icon": "📈",
+      "system_instructions": "You are a sales assistant. Address objections directly, pivot to value, and end with a clear next step.",
+      "user_context_example": "Product: B2B SaaS platform\nPain point: Manual reporting and slow onboarding",
+      "is_builtin": true
+    },
+    {
+      "id": "custom",
+      "name": "Custom",
+      "description": "Start from a blank session template",
+      "version": 1,
+      "icon": "✏️",
+      "system_instructions": "",
+      "user_context_example": "",
+      "is_builtin": true
+    }
+  ]
+}
