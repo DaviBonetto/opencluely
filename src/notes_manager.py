@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Notes Manager
+Opencluely - Notes Manager
 Sprint E5: Sistema de notas com persistencia
 
 Gerencia notas do usuario com:
