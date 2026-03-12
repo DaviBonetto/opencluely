@@ -4,7 +4,7 @@ setlocal
 
 echo.
 echo =====================================
-echo   Opencluely - Desktop Startup
+echo   Opencluely
 echo =====================================
 echo.
 
@@ -39,7 +39,7 @@ if %errorlevel% neq 0 (
 
 if "%GROQ_API_KEY%"=="" (
     echo [WARN] GROQ_API_KEY is not configured.
-    echo        Live transcription and Opencluely Assist will be unavailable.
+    echo        Live transcription and Assist responses will be unavailable.
     echo        Create a key at https://console.groq.com/keys
     echo.
 )
