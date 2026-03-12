@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Módulo de Captura de Áudio Dual
+Opencluely - Captura de Audio Dual
 Captura MICROFONE + SISTEMA (WASAPI Loopback) simultaneamente
 
 Este módulo implementa:
