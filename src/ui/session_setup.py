@@ -9,6 +9,30 @@ from PyQt5.QtCore import Qt, pyqtSignal, QSize, QTimer
 from PyQt5.QtGui import QIcon, QFont, QColor, QCursor
 
 from templates.template_manager import get_template_manager, Template
+try:
+    from brand import (
+        APP_NAME,
+        APP_TAGLINE,
+        PRIMARY_BLUE,
+        SETUP_SURFACE_NAME,
+        SOFT_WHITE,
+        TEXT_MUTED,
+        WORDMARK_FAMILY,
+        WORDMARK_POINT_SIZE,
+        WORDMARK_TRACKING_PERCENT,
+    )
+except ImportError:
+    from src.brand import (
+        APP_NAME,
+        APP_TAGLINE,
+        PRIMARY_BLUE,
+        SETUP_SURFACE_NAME,
+        SOFT_WHITE,
+        TEXT_MUTED,
+        WORDMARK_FAMILY,
+        WORDMARK_POINT_SIZE,
+        WORDMARK_TRACKING_PERCENT,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -18,71 +42,71 @@ logger = logging.getLogger(__name__)
 
 SETUP_STYLESHEET = """
 QWidget {
-    background-color: #0F0F0F;
-    color: #FFFFFF;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    background-color: #08111F;
+    color: #F8F8FF;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
 /* Headers */
 QLabel#header_title {
     font-size: 24px;
-    font-weight: bold;
-    color: #FFFFFF;
+    font-weight: 600;
+    color: #F8F8FF;
     margin-bottom: 5px;
 }
 
 QLabel#header_subtitle {
     font-size: 14px;
-    color: #888888;
+    color: #9FB0CC;
     margin-bottom: 20px;
 }
 
 /* Section Cards */
 QFrame.section_card {
-    background-color: #1A1A1A;
-    border: 1px solid #2A2A2A;
-    border-radius: 12px;
+    background-color: rgba(9, 17, 31, 0.96);
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 16px;
 }
 
 QLabel.section_title {
     font-size: 13px;
     font-weight: 600;
-    color: #AAAAAA;
+    color: #9FB0CC;
     margin-bottom: 8px;
 }
 
 /* Inputs */
 QLineEdit, QTextEdit {
-    background-color: #252525;
-    border: 1px solid #333333;
-    border-radius: 8px;
+    background-color: #0D1527;
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 12px;
     padding: 12px;
     font-size: 13px;
-    color: #FFFFFF;
+    color: #F8F8FF;
 }
 
 QLineEdit:focus, QTextEdit:focus {
-    border: 1px solid #0A84FF;
-    background-color: #2A2A2A;
+    border: 1px solid #4F86F7;
+    background-color: #101B31;
 }
 
 QLineEdit:hover, QTextEdit:hover {
-    border: 1px solid #444444;
+    border: 1px solid rgba(79, 134, 247, 0.30);
 }
 
 /* ComboBox */
 QComboBox {
-    background-color: #252525;
-    border: 1px solid #333333;
-    border-radius: 8px;
+    background-color: #0D1527;
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 12px;
     padding: 10px 15px;
     font-size: 14px;
-    color: #FFFFFF;
+    color: #F8F8FF;
 }
 
 QComboBox:hover {
-    border: 1px solid #444444;
-    background-color: #2A2A2A;
+    border: 1px solid rgba(79, 134, 247, 0.30);
+    background-color: #101B31;
 }
 
 QComboBox::drop-down {
@@ -97,62 +121,62 @@ QComboBox::down-arrow {
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid #AAAAAA;
+    border-top: 5px solid #9FB0CC;
     margin-right: 15px;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #252525;
-    border: 1px solid #333333;
-    selection-background-color: #0A84FF;
-    selection-color: #FFFFFF;
+    background-color: #0D1527;
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    selection-background-color: #4F86F7;
+    selection-color: #F8F8FF;
     outline: none;
     padding: 5px;
 }
 
 /* Buttons */
 QPushButton {
-    background-color: #2A2A2A;
-    border: 1px solid #3A3A3A;
-    border-radius: 6px;
-    color: #E0E0E0;
-    font-weight: 500;
+    background-color: #101B31;
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 10px;
+    color: #D8E2F3;
+    font-weight: 600;
     padding: 6px 12px;
 }
 
 QPushButton:hover {
-    background-color: #353535;
-    border-color: #4A4A4A;
-    color: #FFFFFF;
+    background-color: #162544;
+    border-color: rgba(79, 134, 247, 0.34);
+    color: #F8F8FF;
 }
 
 QPushButton:pressed {
-    background-color: #222222;
+    background-color: #0D1527;
 }
 
 QPushButton#btn_primary {
-    background-color: #0A84FF;
+    background-color: #4F86F7;
     border: none;
-    border-radius: 10px;
-    color: #FFFFFF;
+    border-radius: 12px;
+    color: #F8F8FF;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 700;
     padding: 15px;
     margin-top: 10px;
 }
 
 QPushButton#btn_primary:hover {
-    background-color: #007AFF;
+    background-color: #6696F8;
 }
 
 QPushButton#btn_primary:pressed {
-    background-color: #0062CC;
+    background-color: #3E74DF;
 }
 
 QPushButton#btn_ghost {
     background-color: transparent;
     border: none;
-    color: #0A84FF;
+    color: #4F86F7;
     font-size: 13px;
 }
 
@@ -163,13 +187,13 @@ QPushButton#btn_ghost:hover {
 /* ScrollBar */
 QScrollBar:vertical {
     border: none;
-    background: #1A1A1A;
+    background: #0D1527;
     width: 10px;
     border-radius: 5px;
 }
 
 QScrollBar::handle:vertical {
-    background: #333333;
+    background: rgba(130, 166, 249, 0.26);
     min-height: 20px;
     border-radius: 5px;
 }
@@ -186,7 +210,7 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 # ============================================================================
 
 class TemplateEditorDialog(QDialog):
-    """Modal para criar/editar templates."""
+    """Modal for creating and editing reusable briefs."""
     
     template_saved = pyqtSignal(object)
     
@@ -195,7 +219,7 @@ class TemplateEditorDialog(QDialog):
         self.template = template
         self.is_edit_mode = template is not None and not template.is_builtin
         
-        self.setWindowTitle("Template Editor")
+        self.setWindowTitle("Brief Editor")
         self.setFixedSize(550, 650)
         self.setStyleSheet(SETUP_STYLESHEET)
         # Usar janela modal padrão mas com style dark
@@ -212,13 +236,13 @@ class TemplateEditorDialog(QDialog):
         
         # Header
         header = QHBoxLayout()
-        title = QLabel("Edit Template" if self.is_edit_mode else "New Template")
+        title = QLabel("Edit Brief" if self.is_edit_mode else "New Brief")
         title.setStyleSheet("font-size: 20px; font-weight: bold; color: white;")
         header.addWidget(title)
         
         header.addStretch()
         
-        self.btn_save = QPushButton("Save Template")
+        self.btn_save = QPushButton("Save Brief")
         self.btn_save.setObjectName("btn_primary")
         self.btn_save.setFixedSize(140, 40)
         self.btn_save.setStyleSheet("font-size: 14px; padding: 0;")
@@ -237,15 +261,15 @@ class TemplateEditorDialog(QDialog):
         form_layout.setSpacing(15)
         
         # Name
-        form_layout.addWidget(QLabel("Template Name", objectName="section_title"))
+        form_layout.addWidget(QLabel("Brief Name", objectName="section_title"))
         self.input_name = QLineEdit()
-        self.input_name.setPlaceholderText("e.g., Python Interview, Sales Call...")
+        self.input_name.setPlaceholderText("e.g., Hiring Loop, Sales Call, Design Review...")
         form_layout.addWidget(self.input_name)
         
         # Description
         form_layout.addWidget(QLabel("Description", objectName="section_title"))
         self.input_description = QLineEdit()
-        self.input_description.setPlaceholderText("Brief description of this template purpose")
+        self.input_description.setPlaceholderText("Short description of what this brief is optimized for")
         form_layout.addWidget(self.input_description)
         
         # Icon & Version
@@ -290,9 +314,9 @@ class TemplateEditorDialog(QDialog):
         form_layout.addWidget(self.input_instructions)
         
         # User Context Example
-        form_layout.addWidget(QLabel("User Context Placeholder", objectName="section_title"))
+        form_layout.addWidget(QLabel("Suggested Context", objectName="section_title"))
         self.input_context = QTextEdit()
-        self.input_context.setPlaceholderText("Default context structure to show in the setup screen...")
+        self.input_context.setPlaceholderText("Suggested structure to guide the operator before a session...")
         self.input_context.setMinimumHeight(100)
         form_layout.addWidget(self.input_context)
         
@@ -358,7 +382,7 @@ class SessionSetupWindow(QWidget):
         self.template_manager = get_template_manager()
         self.selected_template: Template = None
         
-        self.setWindowTitle("ParakeetAI - Session Setup")
+        self.setWindowTitle(f"{APP_NAME} - {SETUP_SURFACE_NAME}")
         self.setFixedSize(500, 750) 
         self.setObjectName("session_setup")
         self.setStyleSheet(SETUP_STYLESHEET)
@@ -393,17 +417,21 @@ class SessionSetupWindow(QWidget):
         header.setAlignment(Qt.AlignCenter)
         header.setSpacing(5)
         
-        icon = QLabel("🦜")
-        icon.setStyleSheet("font-size: 54px; margin-bottom: 10px;")
-        icon.setAlignment(Qt.AlignCenter)
-        header.addWidget(icon)
+        wordmark = QLabel(APP_NAME)
+        wordmark_font = QFont(WORDMARK_FAMILY, WORDMARK_POINT_SIZE + 8)
+        wordmark_font.setWeight(QFont.DemiBold)
+        wordmark_font.setLetterSpacing(QFont.PercentageSpacing, WORDMARK_TRACKING_PERCENT)
+        wordmark.setFont(wordmark_font)
+        wordmark.setStyleSheet("color: #F8F8FF; margin-bottom: 10px;")
+        wordmark.setAlignment(Qt.AlignCenter)
+        header.addWidget(wordmark)
         
-        title = QLabel("Session Setup")
+        title = QLabel(SETUP_SURFACE_NAME)
         title.setObjectName("header_title")
         title.setAlignment(Qt.AlignCenter)
         header.addWidget(title)
         
-        sub = QLabel("Configure your AI assistant for this session")
+        sub = QLabel(APP_TAGLINE)
         sub.setObjectName("header_subtitle")
         sub.setAlignment(Qt.AlignCenter)
         header.addWidget(sub)
@@ -421,10 +449,10 @@ class SessionSetupWindow(QWidget):
         # Icon + Info
         info_layout = QVBoxLayout()
         info_layout.setSpacing(2)
-        lbl_prov_title = QLabel("AI Provider")
-        lbl_prov_title.setStyleSheet("color: #888; font-size: 12px; font-weight: 600; text-transform: uppercase;")
-        lbl_prov_val = QLabel("Groq (Llama 3 70B)")
-        lbl_prov_val.setStyleSheet("color: white; font-size: 15px; font-weight: bold;")
+        lbl_prov_title = QLabel("Live Provider")
+        lbl_prov_title.setStyleSheet("color: #9FB0CC; font-size: 12px; font-weight: 600; text-transform: uppercase;")
+        lbl_prov_val = QLabel("Groq Whisper Turbo")
+        lbl_prov_val.setStyleSheet("color: #F8F8FF; font-size: 15px; font-weight: 700;")
         info_layout.addWidget(lbl_prov_title)
         info_layout.addWidget(lbl_prov_val)
         row_prov.addLayout(info_layout)
@@ -433,7 +461,7 @@ class SessionSetupWindow(QWidget):
         
         # Status
         status = QLabel("●  Active")
-        status.setStyleSheet("color: #4CAF50; font-weight: 600; background: rgba(76, 175, 80, 0.1); padding: 5px 10px; border-radius: 15px; font-size: 12px;")
+        status.setStyleSheet("color: #4ADE80; font-weight: 600; background: rgba(74, 222, 128, 0.10); padding: 5px 10px; border-radius: 15px; font-size: 12px;")
         row_prov.addWidget(status)
         
         layout_prov.addLayout(row_prov)
@@ -445,7 +473,7 @@ class SessionSetupWindow(QWidget):
         
         # Header Row
         row_tmpl_header = QHBoxLayout()
-        lbl_tmpl_sec = QLabel("Template")
+        lbl_tmpl_sec = QLabel("Brief")
         lbl_tmpl_sec.setProperty("class", "section_title")
         row_tmpl_header.addWidget(lbl_tmpl_sec)
         row_tmpl_header.addStretch()
@@ -454,12 +482,18 @@ class SessionSetupWindow(QWidget):
         btn_new = QPushButton("+ New")
         btn_new.setCursor(Qt.PointingHandCursor)
         btn_new.clicked.connect(self.new_template)
-        btn_new.setStyleSheet("background: #252525; border: 1px solid #333; border-radius: 4px; padding: 4px 10px; font-size: 12px;")
+        btn_new.setStyleSheet(
+            "background: #101B31; border: 1px solid rgba(130, 166, 249, 0.16); "
+            "border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #D8E2F3;"
+        )
         
         btn_edit = QPushButton("Edit")
         btn_edit.setCursor(Qt.PointingHandCursor)
         btn_edit.clicked.connect(self.edit_template)
-        btn_edit.setStyleSheet("background: #252525; border: 1px solid #333; border-radius: 4px; padding: 4px 10px; font-size: 12px;")
+        btn_edit.setStyleSheet(
+            "background: #101B31; border: 1px solid rgba(130, 166, 249, 0.16); "
+            "border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #D8E2F3;"
+        )
         
         row_tmpl_header.addWidget(btn_new)
         row_tmpl_header.addWidget(btn_edit)
@@ -479,7 +513,7 @@ class SessionSetupWindow(QWidget):
         # ================== LANGUAGE ==================
         wrapper_lang = QVBoxLayout()
         wrapper_lang.setSpacing(10)
-        lbl_lang = QLabel("Transcription Language")
+        lbl_lang = QLabel("Transcript Language")
         lbl_lang.setProperty("class", "section_title")
         wrapper_lang.addWidget(lbl_lang)
         
@@ -494,12 +528,12 @@ class SessionSetupWindow(QWidget):
         wrapper_ctx = QVBoxLayout()
         wrapper_ctx.setSpacing(10)
         
-        lbl_ctx = QLabel("User Context / Meeting Details")
+        lbl_ctx = QLabel("Context Brief")
         lbl_ctx.setProperty("class", "section_title")
         wrapper_ctx.addWidget(lbl_ctx)
         
         self.input_details = QTextEdit()
-        self.input_details.setPlaceholderText("Paste job description, resume highlights, or meeting agenda here...")
+        self.input_details.setPlaceholderText("Paste goals, stakeholders, risks, references, or the agenda for this session...")
         self.input_details.setMinimumHeight(120)
         wrapper_ctx.addWidget(self.input_details)
         
@@ -511,14 +545,14 @@ class SessionSetupWindow(QWidget):
         footer = QVBoxLayout()
         footer.setSpacing(15)
         
-        self.btn_start = QPushButton("Start Session")
+        self.btn_start = QPushButton("Launch Session")
         self.btn_start.setObjectName("btn_primary")
         self.btn_start.setCursor(Qt.PointingHandCursor)
         self.btn_start.setMinimumHeight(55)
         self.btn_start.clicked.connect(self.start_session)
         footer.addWidget(self.btn_start)
         
-        btn_skip = QPushButton("Skip Configuration")
+        btn_skip = QPushButton("Quick Session")
         btn_skip.setObjectName("btn_ghost")
         btn_skip.setCursor(Qt.PointingHandCursor)
         btn_skip.clicked.connect(self.skip_setup)
@@ -566,7 +600,7 @@ class SessionSetupWindow(QWidget):
             if hasattr(self, 'input_details') and self.selected_template:
                 if not self.input_details.toPlainText().strip():
                     self.input_details.setPlaceholderText(
-                        self.selected_template.user_context_example or "Tap to add details..."
+                        self.selected_template.user_context_example or "Add session details..."
                     )
     
     def edit_template(self):
@@ -600,11 +634,12 @@ class SessionSetupWindow(QWidget):
         session_context = {
             "system_instructions": self.selected_template.system_instructions if self.selected_template else "",
             "user_context": self.input_details.toPlainText().strip(),
-            "template_name": self.selected_template.name if self.selected_template else "Default",
+            "brief_name": self.selected_template.name if self.selected_template else "Blank Brief",
+            "template_name": self.selected_template.name if self.selected_template else "Blank Brief",
             "language": self.combo_language.currentText().lower()
         }
-        
-        logger.info(f"[SessionSetup] Iniciando sessão com template: {session_context['template_name']}")
+
+        logger.info("[SessionSetup] Starting session with brief: %s", session_context["brief_name"])
         
         self.session_started.emit(session_context)
         self.hide()
@@ -614,11 +649,15 @@ class SessionSetupWindow(QWidget):
         session_context = {
             "system_instructions": "",
             "user_context": "",
-            "template_name": "Default",
+            "brief_name": "Blank Brief",
+            "template_name": "Blank Brief",
             "language": "en"
         }
         self.session_started.emit(session_context)
         self.hide()
+
+
+SessionSetup = SessionSetupWindow
 
 
 # ============================================================================
