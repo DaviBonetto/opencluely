@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Módulo de Transcrição
+Opencluely - Modulo de Transcricao
 Sprint 3: Transcrição em tempo real com faster-whisper
 
 Este módulo implementa:
