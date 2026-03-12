@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Opencluely - Gerenciador de Contexto
-Sprint 5: Upload de documentos para personalização de respostas
+Upload de documentos para personalização de respostas
 
 Este módulo implementa:
 - Upload de PDF, DOCX, TXT, MD
