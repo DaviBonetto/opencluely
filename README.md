@@ -1,16 +1,17 @@
-# ParakeetAI Clone
+# Opencluely
 
-Legacy desktop assistant for interview support, preserved as a reference baseline for the
-Opencluely rewrite.
+Opencluely is a desktop assistant shell for live meetings, interviews, sales calls, and
+screen-led workflows. This repository also includes the orchestrator and audit documents
+used to harden the product brand and UX.
 
 ## What This Repository Contains
 
-- A floating always-on-top interview overlay built with `PyQt5`
+- A floating always-on-top live assistance overlay built with `PyQt5`
 - Dual audio capture for microphone plus system loopback
 - Local and Groq-based transcription paths
-- Groq-powered answer generation
+- Groq-powered assist generation
 - Screenshot analysis for on-screen questions and code
-- Session templates, notes, and interview-prep state stored locally at runtime
+- Session briefs, notes, and Prep Deck state stored locally at runtime
 
 ## Safety Notes
 
@@ -64,15 +65,15 @@ run.bat                    Windows launcher
 src/audio_capture.py       Dual audio capture worker
 src/transcription.py       Local transcription fallback
 src/transcription_groq.py  Groq transcription provider
-src/ai_helper.py           Answer generation helper
+src/ai_helper.py           Assist generation helper
 src/screen_analyzer.py     Screenshot analysis flow
 src/context_manager.py     Resume and document ingestion
-src/templates/             Session template management
+src/templates/             Session brief management
 src/ui/                    Session setup and overlay shell
 ```
 
 ## Current Position
 
-This repository is being preserved as a legacy reference system, not as the final public
-product architecture. The included orchestrator and audit documents are meant to guide the
-rewrite and cleanup process.
+This repository now carries the Opencluely product name and core brand direction while
+still preserving orchestrator artifacts that document the migration from the earlier
+legacy baseline.
