@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Analisador de Tela (Vision)
+Opencluely - Screen Analyzer
 Sprint E3: Groq Llama Vision para análise de screenshots
 
 Este módulo implementa:
 - Captura de screenshot da tela
-- Análise com Groq Llama 3.2 Vision (multimodal)
+- Análise com Groq Llama 4 Scout (multimodal)
 - Alta precisão para texto e código
 - Processamento em thread separada
 """
@@ -43,14 +43,14 @@ except ImportError:
 # CONSTANTES
 # ============================================================================
 
-# Modelo de visão - Llama 4 Scout (Multimodal Preview)
-# Substitui o Llama 3.2 Vision que foi descontinuado
+# Vision model used for screen analysis
+# Updated from the deprecated legacy vision path
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 VISION_TIMEOUT = 30
 
 # Prompt otimizado para ANÁLISE e SOLUÇÃO (Multimodal Agent)
-VISION_PROMPT = """Você é um assistente de IA especialista (Parakeet).
+VISION_PROMPT = """Você é o Opencluely Assist.
 Analise esta captura de tela com atenção.
 
 SE FOR CÓDIGO/PROBLEMA TÉCNICO:
@@ -66,7 +66,7 @@ SE FOR INTERFACE (UI):
 1. Descreva o que está acontecendo ou sugira melhorias se parecer um erro.
 
 Responda SEMPRE em Português (Brasil).
-Seja direto, técnico e prestativo. Use Markdown para formatar código."""
+Seja direto, preciso e confiável. Use Markdown para formatar código."""
 
 
 # ============================================================================
@@ -106,11 +106,11 @@ class VisionTask(QRunnable):
             start_time = time.time()
             
             try:
-                logger.info("[VisionTask] Analisando com Groq Llama Vision...")
+                logger.info("[VisionTask] Analisando com Groq Vision...")
                 text = self._analyze_with_groq(screenshot)
                 elapsed = time.time() - start_time
                 logger.info(f"✅ Groq Vision: sucesso ({len(text)} chars em {elapsed:.2f}s)")
-                self.signals.method_used.emit("Llama 3.2 Vision")
+                self.signals.method_used.emit("Llama 4 Scout")
                 self.signals.completed.emit(text)
                 
             except Exception as e:
@@ -188,7 +188,7 @@ class ScreenAnalyzer(QObject):
     """
     Analisador de tela com Vision AI.
     
-    Usa Groq Llama 3.2 Vision para análise de screenshots.
+    Usa Groq Llama 4 Scout para análise de screenshots.
     
     Sinais:
         ocr_started(): quando análise começa
