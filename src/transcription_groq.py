@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Opencluely - Modulo de Transcricao (Groq API)
-Sprint 3: Transcrição em tempo real via Groq Whisper API
+Opencluely - Módulo de Transcrição (Groq API)
+Transcrição em tempo real via Groq Whisper API
 
 Este módulo implementa:
 - Transcrição de áudio via Groq Whisper API (gratuita)
