@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Opencluely - Modulo de Transcricao
-Sprint 3: Transcrição em tempo real com faster-whisper
+Opencluely - Módulo de Transcrição
+Transcrição em tempo real com faster-whisper
 
 Este módulo implementa:
 - Carregamento do modelo faster-whisper (tiny)
