@@ -137,10 +137,13 @@ class ContextPromptItem(QFrame):
         self.btn_edit.clicked.connect(self.toggle_edit)
         action_bar.addWidget(self.btn_edit)
 
-        self.btn_delete = QPushButton("🗑")
-        self.btn_delete.setFixedSize(30, 30)
+        self.btn_delete = QPushButton("Delete")
+        self.btn_delete.setFixedSize(68, 30)
         self.btn_delete.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_delete.setStyleSheet("background: #3a2a2a; border-radius: 6px;")
+        self.btn_delete.setStyleSheet(
+            "background: #3a2a2a; color: #f3d6d6; border-radius: 6px; padding: 0 10px;"
+        )
+        self.btn_delete.setToolTip("Delete this prompt")
         self.btn_delete.clicked.connect(lambda: self.item_deleted.emit(self.item_id))
         action_bar.addWidget(self.btn_delete)
         action_bar.addStretch()
@@ -309,7 +312,7 @@ class ContextVaultPanel(QFrame):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(20, 0, 20, 0)
 
-        title = QLabel("📚 Context Vault")
+        title = QLabel("Context Vault")
         title.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -318,7 +321,7 @@ class ContextVaultPanel(QFrame):
         self.counter_label.setStyleSheet("color: #888; font-size: 12px; margin-right: 15px;")
         header_layout.addWidget(self.counter_label)
 
-        btn_add = QPushButton("+ New")
+        btn_add = QPushButton("New Prompt")
         btn_add.setCursor(QCursor(Qt.PointingHandCursor))
         btn_add.setStyleSheet("background: #22c55e; color: white; border-radius: 6px; padding: 6px 12px; font-weight: bold;")
         btn_add.clicked.connect(self.add_prompt)
