@@ -48,7 +48,9 @@ def check_environment() -> bool:
     if api_key.startswith("gsk_"):
         logger.info("GROQ_API_KEY is configured")
     else:
-        logger.warning("GROQ_API_KEY is missing; transcription and Assist will be disabled")
+        logger.warning(
+            "GROQ_API_KEY is missing; transcription, Assist, and Screen Analysis will be disabled"
+        )
 
     try:
         import pytesseract
