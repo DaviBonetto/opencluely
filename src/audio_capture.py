@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Opencluely - Captura de Audio Dual
+Opencluely - Módulo de Captura de Áudio Dual
 Captura MICROFONE + SISTEMA (WASAPI Loopback) simultaneamente
 
 Este módulo implementa:
