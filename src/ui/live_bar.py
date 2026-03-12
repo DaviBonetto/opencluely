@@ -965,9 +965,11 @@ class LiveBar(QMainWindow):
 
     def toggle_notes(self) -> None:
         is_visible = self.context_container.isVisible()
-        self.context_container.setVisible(not is_visible)
+        next_visible = not is_visible
+        self.context_container.setVisible(next_visible)
+        self._set_context_button_active(next_visible)
 
-        if not is_visible:
+        if next_visible:
             self.ensure_content_visible(min_height=620)
         elif not self.is_expanded:
             self.resize(self.width(), self.min_height)
@@ -1074,6 +1076,11 @@ class LiveBar(QMainWindow):
         if len(clean_text) <= limit:
             return clean_text
         return f"{clean_text[:limit].rstrip()}\n\n[truncated]"
+
+    def _set_context_button_active(self, is_active: bool) -> None:
+        self.btn_context.setObjectName("btn_active" if is_active else "")
+        self.btn_context.style().unpolish(self.btn_context)
+        self.btn_context.style().polish(self.btn_context)
 
 
 if __name__ == "__main__":
