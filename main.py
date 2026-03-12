@@ -1,4 +1,4 @@
-"""Desktop entrypoint for the legacy Parakeet interview assistant."""
+"""Desktop entrypoint for the Opencluely shell."""
 
 from __future__ import annotations
 
@@ -14,10 +14,11 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from brand import APP_LOG_PREFIX, APP_NAME
 from storage_paths import build_log_file
 
 
-LOG_FILE = build_log_file("parakeet")
+LOG_FILE = build_log_file(APP_LOG_PREFIX)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,11 +66,11 @@ def main() -> int:
     """Create the Qt app, open session setup, and launch the floating overlay."""
     print()
     print("=" * 50)
-    print("  ParakeetAI Clone - Legacy Desktop Baseline")
+    print(f"  {APP_NAME} - Desktop Shell")
     print("=" * 50)
     print()
 
-    logger.info("=== ParakeetAI Clone starting ===")
+    logger.info("=== %s starting ===", APP_NAME)
     logger.info("Log file: %s", LOG_FILE)
 
     try:
@@ -86,12 +87,13 @@ def main() -> int:
         QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
         app = QApplication(sys.argv)
-        app.setApplicationName("ParakeetAI Clone")
-        app.setApplicationVersion("1.0.0-legacy")
+        app.setApplicationName(APP_NAME)
+        app.setApplicationVersion("0.1.0")
         app.setQuitOnLastWindowClosed(False)
 
         def on_session_started(session_context: dict) -> None:
-            logger.info("Session started with template: %s", session_context.get("template_name"))
+            active_brief = session_context.get("brief_name") or session_context.get("template_name")
+            logger.info("Session started with brief: %s", active_brief)
             overlay = HorizontalOverlay()
 
             if hasattr(overlay, "set_session_data"):
