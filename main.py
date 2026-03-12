@@ -1,4 +1,4 @@
-"""Desktop entrypoint for the Opencluely shell."""
+"""Desktop entrypoint for Opencluely."""
 
 from __future__ import annotations
 
@@ -14,11 +14,10 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from brand import APP_LOG_PREFIX, APP_NAME
 from storage_paths import build_log_file
 
 
-LOG_FILE = build_log_file(APP_LOG_PREFIX)
+LOG_FILE = build_log_file("opencluely")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,7 +48,7 @@ def check_environment() -> bool:
     if api_key.startswith("gsk_"):
         logger.info("GROQ_API_KEY is configured")
     else:
-        logger.warning("GROQ_API_KEY is missing; transcription and AI help will be disabled")
+        logger.warning("GROQ_API_KEY is missing; transcription and Assist will be disabled")
 
     try:
         import pytesseract
@@ -63,14 +62,14 @@ def check_environment() -> bool:
 
 
 def main() -> int:
-    """Create the Qt app, open session setup, and launch the floating overlay."""
+    """Create the Qt app, open Launchpad, and launch Live Bar."""
     print()
     print("=" * 50)
-    print(f"  {APP_NAME} - Desktop Shell")
+    print("  Opencluely")
     print("=" * 50)
     print()
 
-    logger.info("=== %s starting ===", APP_NAME)
+    logger.info("=== Opencluely starting ===")
     logger.info("Log file: %s", LOG_FILE)
 
     try:
@@ -80,33 +79,32 @@ def main() -> int:
 
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication
-        from ui.horizontal_overlay import HorizontalOverlay
-        from ui.session_setup import SessionSetupWindow
+        from ui.launchpad import LaunchpadWindow
+        from ui.live_bar import LiveBar
 
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
         app = QApplication(sys.argv)
-        app.setApplicationName(APP_NAME)
-        app.setApplicationVersion("0.1.0")
+        app.setApplicationName("Opencluely")
+        app.setApplicationVersion("1.0.0")
         app.setQuitOnLastWindowClosed(False)
 
         def on_session_started(session_context: dict) -> None:
-            active_brief = session_context.get("brief_name") or session_context.get("template_name")
-            logger.info("Session started with brief: %s", active_brief)
-            overlay = HorizontalOverlay()
+            logger.info("Session started with profile: %s", session_context.get("profile_name"))
+            overlay = LiveBar()
 
             if hasattr(overlay, "set_session_data"):
                 overlay.set_session_data(session_context)
             else:
-                logger.warning("HorizontalOverlay does not expose set_session_data")
+                logger.warning("LiveBar does not expose set_session_data")
 
             overlay.show()
             app.overlay = overlay
 
-        session_setup = SessionSetupWindow()
-        session_setup.session_started.connect(on_session_started)
-        session_setup.show()
+        launchpad = LaunchpadWindow()
+        launchpad.session_started.connect(on_session_started)
+        launchpad.show()
 
         logger.info("Entering Qt event loop")
         return app.exec_()
