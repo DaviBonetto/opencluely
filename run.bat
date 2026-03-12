@@ -4,7 +4,7 @@ setlocal
 
 echo.
 echo =====================================
-echo   ParakeetAI Clone - Legacy Startup
+echo   Opencluely - Desktop Startup
 echo =====================================
 echo.
 
@@ -39,12 +39,12 @@ if %errorlevel% neq 0 (
 
 if "%GROQ_API_KEY%"=="" (
     echo [WARN] GROQ_API_KEY is not configured.
-    echo        Live transcription and AI answer generation will be unavailable.
+    echo        Live transcription and Opencluely Assist will be unavailable.
     echo        Create a key at https://console.groq.com/keys
     echo.
 )
 
-echo Launching the desktop assistant...
+echo Launching Opencluely...
 echo Logs will be written to the logs\ directory.
 echo.
 

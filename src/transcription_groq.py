@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Módulo de Transcrição (Groq API)
+Opencluely - Modulo de Transcricao (Groq API)
 Sprint 3: Transcrição em tempo real via Groq Whisper API
 
 Este módulo implementa:

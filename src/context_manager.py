@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Gerenciador de Contexto
+Opencluely - Gerenciador de Contexto
 Sprint 5: Upload de documentos para personalização de respostas
 
 Este módulo implementa:

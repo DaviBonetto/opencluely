@@ -1,4 +1,4 @@
-"""Desktop entrypoint for the Opencluely shell."""
+#!/usr/bin/env python3
 
 from __future__ import annotations
 
@@ -29,14 +29,11 @@ logging.basicConfig(
     ],
 )
 
-logger = logging.getLogger("main")
+logger = logging.getLogger("main_fixed")
 
 
 def check_environment() -> bool:
-    """Validate a minimal runtime environment before booting the UI."""
-    logger.info("Checking runtime environment")
-    logger.info("Python: %s", sys.version)
-
+    """Validate the minimal environment used by the alternate launcher."""
     try:
         from PyQt5.QtCore import QT_VERSION_STR
 
@@ -49,28 +46,19 @@ def check_environment() -> bool:
     if api_key.startswith("gsk_"):
         logger.info("GROQ_API_KEY is configured")
     else:
-        logger.warning("GROQ_API_KEY is missing; transcription and AI help will be disabled")
-
-    try:
-        import pytesseract
-
-        pytesseract.get_tesseract_version()
-        logger.info("Tesseract is available")
-    except Exception:
-        logger.warning("Tesseract is not available; screen OCR will be disabled")
+        logger.warning("GROQ_API_KEY is missing; AI features will be limited")
 
     return True
 
 
 def main() -> int:
-    """Create the Qt app, open session setup, and launch the floating overlay."""
     print()
     print("=" * 50)
-    print(f"  {APP_NAME} - Desktop Shell")
+    print(f"  {APP_NAME} - Alternate Launcher")
     print("=" * 50)
     print()
 
-    logger.info("=== %s starting ===", APP_NAME)
+    logger.info("=== %s alternate launcher starting ===", APP_NAME)
     logger.info("Log file: %s", LOG_FILE)
 
     try:
@@ -89,18 +77,15 @@ def main() -> int:
         app = QApplication(sys.argv)
         app.setApplicationName(APP_NAME)
         app.setApplicationVersion("0.1.0")
+        app.setStyle("Fusion")
         app.setQuitOnLastWindowClosed(False)
 
         def on_session_started(session_context: dict) -> None:
             active_brief = session_context.get("brief_name") or session_context.get("template_name")
             logger.info("Session started with brief: %s", active_brief)
             overlay = HorizontalOverlay()
-
             if hasattr(overlay, "set_session_data"):
                 overlay.set_session_data(session_context)
-            else:
-                logger.warning("HorizontalOverlay does not expose set_session_data")
-
             overlay.show()
             app.overlay = overlay
 
@@ -108,18 +93,11 @@ def main() -> int:
         session_setup.session_started.connect(on_session_started)
         session_setup.show()
 
-        logger.info("Entering Qt event loop")
         return app.exec_()
 
-    except ImportError as exc:
-        logger.critical("Import error during bootstrap", exc_info=True)
-        print(f"\nMissing module: {exc}")
-        print("Run: pip install -r requirements.txt")
-        return 1
     except Exception as exc:
-        logger.critical("Fatal startup error", exc_info=True)
+        logger.error("Fatal startup error", exc_info=True)
         print(f"\nFatal error: {exc}")
-        print(f"Review the log for details: {LOG_FILE}")
         return 1
 
 
