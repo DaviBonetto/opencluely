@@ -20,6 +20,16 @@ Screen Analysis while preserving the original architecture as a rewrite baseline
 - Provider credentials must come from environment variables
 - Legacy personal context data is quarantined under `quarantine/`
 
+## Runtime Migration Notes
+
+- Saved profile state now lives in `data/copilot_profiles.json`
+- Context notes now live in `data/context_notes.json`
+- Context Vault prompts now live in `data/context_vault.json`
+- Legacy runtime profile ids such as `interview_assistant`, `leetcode_helper`, `sales_assistant`,
+  and `custom` are normalized to `general_copilot`, `problem_solving`, `sales_conversation`, and
+  `custom_profile` during load
+- Legacy runtime profile payloads in `data/templates.json` are migrated forward automatically
+
 ## Quick Start
 
 ### Windows
