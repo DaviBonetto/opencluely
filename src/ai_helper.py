@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-ParakeetAI Clone - Módulo AI Helper
+Opencluely - AI Helper
 Sprint 4: Respostas automáticas para perguntas de entrevista
 
 Este módulo implementa:
