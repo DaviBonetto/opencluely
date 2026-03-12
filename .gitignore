@@ -8,13 +8,10 @@ venv/
 env/
 
 logs/
-parakeet_*.log
+opencluely_*.log
 
 data/
-
-config/lala_prep.json
-config/notes.json
-config/templates.json
+quarantine/
 
 .env
 .env.*
