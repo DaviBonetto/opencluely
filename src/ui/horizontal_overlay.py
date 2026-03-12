@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-ParakeetAI Clone - UI Horizontal (Sprint E2)
-Refinamento Visual e Interativo - Capsule Style
-
-Características:
-- Janela transparente com widgets flutuantes arredondados
-- Top Bar estilo "Cápsula"
-- Drag & Drop na Top Bar
-- Resize na borda inferior
-- Chat Cards estilizados
-- Botões "Pill" (arredondados)
-"""
+"""Opencluely floating shell."""
 
 import sys
 import os
@@ -34,13 +23,41 @@ try:
 except ImportError:
     from src.notes_manager import NotesManager
 
-# Import LALA components
+# Import brand and Prep Deck components
 try:
-    from lala_manager import LALAManager
-    from ui.lala_panel import LALAPanel
+    from brand import (
+        APP_NAME,
+        ASSIST_ACTION_LABEL,
+        CHAT_ACTION_LABEL,
+        NOTES_SURFACE_NAME,
+        PREP_DECK_NAME,
+        PRIMARY_BLUE,
+        SOFT_WHITE,
+        TEXT_MUTED,
+        SCREEN_ACTION_LABEL,
+        WORDMARK_FAMILY,
+        WORDMARK_POINT_SIZE,
+        WORDMARK_TRACKING_PERCENT,
+    )
+    from prep_deck_manager import PrepDeckManager
+    from ui.prep_deck_panel import PrepDeckPanel
 except ImportError:
-    from src.lala_manager import LALAManager
-    from src.ui.lala_panel import LALAPanel
+    from src.brand import (
+        APP_NAME,
+        ASSIST_ACTION_LABEL,
+        CHAT_ACTION_LABEL,
+        NOTES_SURFACE_NAME,
+        PREP_DECK_NAME,
+        PRIMARY_BLUE,
+        SOFT_WHITE,
+        TEXT_MUTED,
+        SCREEN_ACTION_LABEL,
+        WORDMARK_FAMILY,
+        WORDMARK_POINT_SIZE,
+        WORDMARK_TRACKING_PERCENT,
+    )
+    from src.prep_deck_manager import PrepDeckManager
+    from src.ui.prep_deck_panel import PrepDeckPanel
 
 logger = logging.getLogger('horizontal_overlay')
 
@@ -56,36 +73,38 @@ QMainWindow, QWidget#central {
 
 /* Container Principal (Top Bar) */
 QFrame#top_bar {
-    background-color: #1E1E1E;
-    border-radius: 20px;
-    border: 1px solid #333333;
+    background-color: rgba(8, 17, 31, 0.96);
+    border-radius: 24px;
+    border: 1px solid rgba(130, 166, 249, 0.20);
 }
 
 /* Container de Conteúdo (Transcrição/Chat) */
 QFrame#content_container {
-    background-color: #121212;
-    border-radius: 15px;
-    border: 1px solid #2A2A2A;
+    background-color: rgba(9, 17, 31, 0.98);
+    border-radius: 20px;
+    border: 1px solid rgba(130, 166, 249, 0.16);
 }
 
 /* Labels */
 QLabel {
-    color: #FFFFFF;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    color: #F8F8FF;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     font-size: 13px;
 }
 
 QLabel#logo_text {
-    font-weight: bold;
+    color: #F8F8FF;
+    font-weight: 600;
     font-size: 14px;
 }
 
 QLabel#timer_label {
     font-family: 'Consolas', monospace;
     font-weight: bold;
-    color: #FFFFFF;
-    background-color: #000000;
-    border-radius: 5px;
+    color: #F8F8FF;
+    background-color: rgba(79, 134, 247, 0.18);
+    border: 1px solid rgba(79, 134, 247, 0.30);
+    border-radius: 9px;
     padding: 4px 8px;
 }
 
@@ -93,8 +112,8 @@ QLabel#timer_label {
 QPushButton {
     background: transparent;
     border: none;
-    color: #E0E0E0;
-    font-family: 'Segoe UI', sans-serif;
+    color: #D8E2F3;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     font-size: 13px;
     padding: 5px;
 }
@@ -105,48 +124,52 @@ QPushButton:hover {
 
 /* Botões "Pill" (Cápsula) */
 QPushButton.pill-btn {
-    background-color: #2D2D2D;
-    border-radius: 15px;
-    padding: 6px 16px;
-    font-weight: 500;
+    background-color: rgba(15, 27, 49, 0.92);
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 16px;
+    padding: 7px 16px;
+    font-weight: 600;
 }
 
 QPushButton.pill-btn:hover {
-    background-color: #404040;
+    background-color: rgba(20, 35, 62, 0.98);
+    border-color: rgba(79, 134, 247, 0.42);
 }
 
 QPushButton.pill-btn:pressed {
-    background-color: #505050;
+    background-color: rgba(24, 42, 74, 0.98);
 }
 
 /* Botão AI Help (Destaque) */
 QPushButton#btn_ai {
-    background-color: #2D2D2D;
-    border: 1px solid #3D3D3D;
+    background-color: rgba(79, 134, 247, 0.18);
+    border: 1px solid rgba(79, 134, 247, 0.38);
 }
 
 QPushButton#btn_ai:hover {
-    border-color: #555555;
-    background-color: #333333;
+    border-color: rgba(79, 134, 247, 0.58);
+    background-color: rgba(79, 134, 247, 0.28);
 }
 
 /* Botão Screen */
 QPushButton#btn_screen {
-    background-color: #2D2D2D;
-    border: 1px solid #3D3D3D;
+    background-color: rgba(15, 27, 49, 0.92);
+    border: 1px solid rgba(130, 166, 249, 0.16);
 }
 
 /* Ícones de Controle (Direita) */
 QPushButton.icon-btn {
-    background-color: #252525;
-    border-radius: 8px;
+    background-color: rgba(15, 27, 49, 0.92);
+    border: 1px solid rgba(130, 166, 249, 0.16);
+    border-radius: 10px;
     padding: 6px;
     width: 32px;
     height: 32px;
 }
 
 QPushButton.icon-btn:hover {
-    background-color: #353535;
+    background-color: rgba(20, 35, 62, 0.98);
+    border-color: rgba(79, 134, 247, 0.38);
 }
 
 QPushButton#btn_close:hover {
@@ -155,11 +178,11 @@ QPushButton#btn_close:hover {
 
 /* Transcrição */
 QTextEdit#transcription_box {
-    background-color: #121212;
+    background-color: transparent;
     border: none;
-    color: #E0E0E0;
+    color: #E4EBF8;
     font-size: 13px;
-    selection-background-color: #404040;
+    selection-background-color: rgba(79, 134, 247, 0.32);
 }
 
 /* ScrollArea */
@@ -172,14 +195,14 @@ QScrollArea > QWidget > QWidget {
 }
 
 QScrollBar:vertical {
-    background: #1A1A1A;
+    background: #0D1527;
     width: 6px;
     margin: 0;
     border-radius: 3px;
 }
 
 QScrollBar::handle:vertical {
-    background: #404040;
+    background: rgba(130, 166, 249, 0.28);
     min-height: 20px;
     border-radius: 3px;
 }
@@ -190,9 +213,9 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
 
 /* Cards de Resposta - MELHORADOS */
 QFrame.response-card {
-    background-color: #1E1E1E;
+    background-color: rgba(10, 18, 33, 0.96);
     border-radius: 12px;
-    border: 2px solid #333333;
+    border: 1px solid rgba(130, 166, 249, 0.16);
     margin: 8px 0;
 }
 
@@ -205,13 +228,13 @@ QScrollBar:vertical {
 }
 
 QLabel.q-label {
-    color: #AAAAAA;
+    color: #9FB0CC;
     font-size: 12px;
     font-style: italic;
 }
 
 QLabel.a-label {
-    color: #FFFFFF;
+    color: #F8F8FF;
     font-size: 13px;
     line-height: 1.4;
 }
@@ -479,7 +502,8 @@ class HorizontalOverlay(QMainWindow):
     def set_session_data(self, session_context: dict):
         """Define o contexto da sessão vindo do SessionSetup."""
         self.session_context = session_context or {}
-        logger.info(f"Dados da sessão definidos: {self.session_context.get('template_name')}")
+        active_brief = self.session_context.get("brief_name") or self.session_context.get("template_name")
+        logger.info("Session context applied: %s", active_brief)
 
     def setup_ui(self):
         """Monta a interface."""
@@ -512,9 +536,13 @@ class HorizontalOverlay(QMainWindow):
         # img_logo.setStyleSheet("font-size: 20px;")
         # bar_layout.addWidget(img_logo)
         
-        lbl_logo = QLabel("🦜 ParakeetAI")
-        lbl_logo.setObjectName("logo_text")
-        bar_layout.addWidget(lbl_logo)
+        self.lbl_logo = QLabel(APP_NAME)
+        self.lbl_logo.setObjectName("logo_text")
+        wordmark_font = QFont(WORDMARK_FAMILY, WORDMARK_POINT_SIZE)
+        wordmark_font.setWeight(QFont.DemiBold)
+        wordmark_font.setLetterSpacing(QFont.PercentageSpacing, WORDMARK_TRACKING_PERCENT)
+        self.lbl_logo.setFont(wordmark_font)
+        bar_layout.addWidget(self.lbl_logo)
         
         # -- Status Icon (Rec) --
         self.icon_rec = QLabel("🔴")
@@ -528,7 +556,7 @@ class HorizontalOverlay(QMainWindow):
         self.btn_mic.setFixedSize(30, 30)
         self.btn_mic.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_mic.clicked.connect(self.toggle_recording)
-        self.btn_mic.setToolTip("Start/Stop Recording")
+        self.btn_mic.setToolTip("Start or stop live capture")
         bar_layout.addWidget(self.btn_mic)
         
         # Separator V
@@ -538,14 +566,14 @@ class HorizontalOverlay(QMainWindow):
         bar_layout.addWidget(sep1)
         
         # -- Pills --
-        self.btn_ai = QPushButton("AI Help ✨")
+        self.btn_ai = QPushButton(ASSIST_ACTION_LABEL)
         self.btn_ai.setObjectName("btn_ai")
         self.btn_ai.setProperty("class", "pill-btn")
         self.btn_ai.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_ai.clicked.connect(self.on_ai_help)
         bar_layout.addWidget(self.btn_ai)
         
-        self.btn_screen = QPushButton("Analyze Screen 📺")
+        self.btn_screen = QPushButton(SCREEN_ACTION_LABEL)
         self.btn_screen.setObjectName("btn_screen")
         self.btn_screen.setProperty("class", "pill-btn")
         self.btn_screen.setCursor(QCursor(Qt.PointingHandCursor))
@@ -553,7 +581,7 @@ class HorizontalOverlay(QMainWindow):
         bar_layout.addWidget(self.btn_screen)
         
         # Botão Chat (Toggle Visibilidade)
-        self.btn_chat = QPushButton("Chat 💬")
+        self.btn_chat = QPushButton(CHAT_ACTION_LABEL)
         self.btn_chat.setProperty("class", "pill-btn")
         self.btn_chat.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_chat.clicked.connect(self.toggle_content_area)
@@ -565,7 +593,7 @@ class HorizontalOverlay(QMainWindow):
         self.btn_clear = QPushButton("🗑️")
         self.btn_clear.setFixedSize(30, 30)
         self.btn_clear.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_clear.setToolTip("Limpar Transcrição e Contexto")
+        self.btn_clear.setToolTip("Clear transcript and generated cards")
         self.btn_clear.clicked.connect(self.clear_all)
         bar_layout.addWidget(self.btn_clear)
         
@@ -573,17 +601,17 @@ class HorizontalOverlay(QMainWindow):
         self.btn_notes = QPushButton("📝")
         self.btn_notes.setFixedSize(30, 30)
         self.btn_notes.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_notes.setToolTip("Mostrar/Ocultar Notas")
+        self.btn_notes.setToolTip(f"Open {NOTES_SURFACE_NAME}")
         self.btn_notes.clicked.connect(self.toggle_notes)
         bar_layout.addWidget(self.btn_notes)
         
-        # -- LALA Prep Button --
-        self.btn_lala = QPushButton("🎓")
-        self.btn_lala.setFixedSize(30, 30)
-        self.btn_lala.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_lala.setToolTip("LALA Interview Prep")
-        self.btn_lala.clicked.connect(self.toggle_lala_panel)
-        bar_layout.addWidget(self.btn_lala)
+        # -- Prep Deck Button --
+        self.btn_prep_deck = QPushButton("📋")
+        self.btn_prep_deck.setFixedSize(30, 30)
+        self.btn_prep_deck.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_prep_deck.setToolTip(PREP_DECK_NAME)
+        self.btn_prep_deck.clicked.connect(self.toggle_prep_deck_panel)
+        bar_layout.addWidget(self.btn_prep_deck)
         
         # -- Timer --
         self.lbl_timer = QLabel("00:00")
@@ -630,7 +658,7 @@ class HorizontalOverlay(QMainWindow):
         self.txt_transcription.setObjectName("transcription_box")
         self.txt_transcription.setFixedHeight(60) # Padrão pequeno
         self.txt_transcription.setReadOnly(True)
-        self.txt_transcription.setPlaceholderText("Transcrição em tempo real...")
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here...")
         content_layout.addWidget(self.txt_transcription)
         
         # Scroll de Respostas
@@ -651,18 +679,18 @@ class HorizontalOverlay(QMainWindow):
         chat_input_layout.setSpacing(8)
         
         self.chat_input = QLineEdit()
-        self.chat_input.setPlaceholderText("Digite sua mensagem para a IA...")
+        self.chat_input.setPlaceholderText("Ask about your screen, conversation, or next move...")
         self.chat_input.setStyleSheet("""
             QLineEdit {
-                background-color: #2a2a2a;
-                border: 1px solid #444;
-                border-radius: 15px;
+                background-color: rgba(12, 20, 36, 0.96);
+                border: 1px solid rgba(130, 166, 249, 0.16);
+                border-radius: 16px;
                 padding: 8px 15px;
-                color: #fff;
+                color: #F8F8FF;
                 font-size: 13px;
             }
             QLineEdit:focus {
-                border-color: #666;
+                border-color: #4F86F7;
             }
         """)
         self.chat_input.returnPressed.connect(self.send_chat_message)
@@ -673,13 +701,13 @@ class HorizontalOverlay(QMainWindow):
         self.btn_send.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_send.setStyleSheet("""
             QPushButton {
-                background-color: #4a90d9;
+                background-color: #4F86F7;
                 border-radius: 17px;
                 color: white;
                 font-size: 16px;
             }
             QPushButton:hover {
-                background-color: #5aa0e9;
+                background-color: #6696F8;
             }
         """)
         self.btn_send.clicked.connect(self.send_chat_message)
@@ -699,9 +727,9 @@ class HorizontalOverlay(QMainWindow):
         self.notes_container.setMaximumHeight(self.notes_max_height)
         self.notes_container.setStyleSheet("""
             QFrame#notes_container {
-                background-color: #1a1a1a;
+                background-color: #0D1527;
                 border-radius: 12px;
-                border: 2px solid #333;
+                border: 1px solid rgba(130, 166, 249, 0.16);
                 margin: 5px 0;
             }
         """)
@@ -835,8 +863,8 @@ class HorizontalOverlay(QMainWindow):
         # Notes Manager
         self.init_notes_manager()
         
-        # LALA Manager
-        self.init_lala_manager()
+        # Prep Deck
+        self.init_prep_deck_manager()
 
     def setup_tray(self):
         self.tray = QSystemTrayIcon(self)
@@ -957,7 +985,7 @@ class HorizontalOverlay(QMainWindow):
                     if not self.is_expanded:
                         self.toggle_content_area()
                     
-                    self.txt_transcription.setPlaceholderText("Escutando...")
+                    self.txt_transcription.setPlaceholderText("Listening...")
                 else:
                     self.add_log("Erro: Módulo de áudio não disponível")
             else:
@@ -973,7 +1001,7 @@ class HorizontalOverlay(QMainWindow):
                 if self.timer_rec:
                     self.timer_rec.stop()
                 
-                self.txt_transcription.setPlaceholderText("Clique no microfone para iniciar transcrição...")
+                self.txt_transcription.setPlaceholderText("Click the mic to start live transcription...")
         except Exception as e:
             print(f"Erro toggle_recording: {e}")
             self.add_log(f"Erro: {e}")
@@ -1032,11 +1060,8 @@ class HorizontalOverlay(QMainWindow):
             return
         
         # Log debug
-        print(f"[DEBUG] on_ai_help - Transcript length: {len(q)} chars")
-        print(f"[DEBUG] on_ai_help - session_context: {self.session_context}")
-            
         self.btn_ai.setEnabled(False)
-        self.btn_ai.setText("🤖 ...")
+        self.btn_ai.setText("Thinking...")
         
         resume_context = ""
         if self.context:
@@ -1051,9 +1076,9 @@ class HorizontalOverlay(QMainWindow):
 
     def on_ai_answer(self, answer):
         self.btn_ai.setEnabled(True)
-        self.btn_ai.setText("AI Help ✨")
+        self.btn_ai.setText(ASSIST_ACTION_LABEL)
         self.btn_send.setEnabled(True)
-        self.chat_input.setPlaceholderText("Digite sua mensagem para a IA...")
+        self.chat_input.setPlaceholderText("Ask about your screen, conversation, or next move...")
         self.add_response(self.last_question, answer)
 
     def on_screen_capture(self):
@@ -1063,31 +1088,31 @@ class HorizontalOverlay(QMainWindow):
 
     def _do_capture(self):
         self.show()
-        self.btn_screen.setText("📺 ...")
+        self.btn_screen.setText("Scanning...")
         self.btn_screen.setEnabled(False)
-        self.txt_transcription.setPlaceholderText("Analisando tela...")
+        self.txt_transcription.setPlaceholderText("Screen analysis in progress...")
         
         if self.screen:
             self.screen.capture_and_ocr()
 
     def on_ocr_result(self, text):
-        self.btn_screen.setText("Analyze Screen 📺")
+        self.btn_screen.setText(SCREEN_ACTION_LABEL)
         self.btn_screen.setEnabled(True)
         
         # Adicionar Card de Resposta (Markdown Renderizado)
-        self.add_response("📸 Análise de Tela", text)
+        self.add_response("Screen analysis", text)
         
         # Opcional: Colocar no transcript (ou deixar limpo para não poluir?)
         # O usuário pediu para "não atrapalhar a transcrição". 
         # Vamos deixar o transcript QUIETO ou apenas um aviso.
-        self.txt_transcription.setPlaceholderText("Análise completa. Veja o card abaixo.")
+        self.txt_transcription.setPlaceholderText("Screen analysis is ready below.")
         # self.txt_transcription.setPlainText(f"--- ANÁLISE DE TELA ---\n\n{text}") # REMOVIDO para limpeza
         
     def clear_all(self):
         """Limpa transcrição, resetou contexto e last_question."""
         self.txt_transcription.clear()
         self.last_question = ""
-        self.txt_transcription.setPlaceholderText("Transcrição limpa...")
+        self.txt_transcription.setPlaceholderText("Transcript cleared.")
         
         # Limpar cards antigos?
         while self.response_layout.count() > 1: # Mantém o stretch no final
@@ -1127,7 +1152,7 @@ class HorizontalOverlay(QMainWindow):
         
         # Limpar input
         self.chat_input.clear()
-        self.chat_input.setPlaceholderText("Enviando...")
+        self.chat_input.setPlaceholderText("Sending...")
         
         # Guardar como última pergunta
         self.last_question = message
@@ -1168,7 +1193,7 @@ class HorizontalOverlay(QMainWindow):
             if not self.is_expanded:
                 self.toggle_content_area()
         else:
-            self.add_response("Sistema", "AI Helper não disponível. Verifique a API Key.")
+            self.add_response("System", "Opencluely Assist is unavailable. Check your API key.")
 
     def toggle_notes(self):
         """Mostra/Oculta painel de notas - FIXED UI BREAK."""
@@ -1191,9 +1216,7 @@ class HorizontalOverlay(QMainWindow):
             if current_h < target_h:
                 self.resize(self.width(), target_h)
                 
-            # Fechar LALA se estiver aberto (não é mais necessário pois é janela separada, mas bom pra foco)
-            # Mas como agora é janela separada, podemos deixar aberto.
-            # Apenas garantimos que o botão LALA atualize se precisarmos
+            # The Prep Deck is independent, so we keep it open if the user wants it.
         else:
             self.notes_container.setVisible(False)
             # Se quiser encolher de volta quando fecha notas?
@@ -1300,49 +1323,46 @@ class HorizontalOverlay(QMainWindow):
             self.add_log(f"🗑️ Nota '{title}' excluída")
     
     # ========================================================================
-    # LALA MANAGEMENT
+    # PREP DECK MANAGEMENT
     # ========================================================================
     
-    def init_lala_manager(self):
-        """Inicializa o gerenciador LALA e o painel."""
-        self.lala_manager = LALAManager()
+    def init_prep_deck_manager(self):
+        """Initialize the Prep Deck manager and floating panel."""
+        self.prep_deck_manager = PrepDeckManager()
         
-        # Criar como janela TOP-LEVEL (sem parent) para evitar problemas de transparência
-        self.lala_panel = LALAPanel(self.lala_manager, None)
-        self.lala_panel.setWindowFlags(
+        self.prep_deck_panel = PrepDeckPanel(self.prep_deck_manager, None)
+        self.prep_deck_panel.setWindowFlags(
             Qt.FramelessWindowHint | 
             Qt.WindowStaysOnTopHint | 
             Qt.Tool
         )
-        self.lala_panel.setVisible(False)
-        self.lala_panel.closed.connect(lambda: self.btn_lala.setStyleSheet(""))
+        self.prep_deck_panel.setVisible(False)
+        self.prep_deck_panel.closed.connect(lambda: self.btn_prep_deck.setStyleSheet(""))
         
-        # Tamanho padrão maior e melhor posicionado
-        self.lala_panel.resize(550, 650)
+        self.prep_deck_panel.resize(550, 650)
         
-        logger.info(f"[LALAManager] Inicializado com {len(self.lala_manager.get_all())} perguntas")
+        logger.info("[%s] Initialized with %s prompts", PREP_DECK_NAME, len(self.prep_deck_manager.get_all()))
     
-    def toggle_lala_panel(self):
-        """Mostra/Oculta painel LALA Prep - Janela Independente Centralizada."""
-        is_visible = self.lala_panel.isVisible()
+    def toggle_prep_deck_panel(self):
+        """Toggle the floating Prep Deck panel."""
+        is_visible = self.prep_deck_panel.isVisible()
         
         if not is_visible:
-            # Centralizar na tela
             screen_geo = QApplication.primaryScreen().availableGeometry()
-            panel_w = self.lala_panel.width()
-            panel_h = self.lala_panel.height()
+            panel_w = self.prep_deck_panel.width()
+            panel_h = self.prep_deck_panel.height()
             
             center_x = screen_geo.x() + (screen_geo.width() - panel_w) // 2
             center_y = screen_geo.y() + (screen_geo.height() - panel_h) // 2
             
-            self.lala_panel.move(center_x, center_y)
-            self.lala_panel.show()
-            self.lala_panel.raise_()
-            self.lala_panel.activateWindow()
-            self.btn_lala.setStyleSheet("background: #22c55e;")
+            self.prep_deck_panel.move(center_x, center_y)
+            self.prep_deck_panel.show()
+            self.prep_deck_panel.raise_()
+            self.prep_deck_panel.activateWindow()
+            self.btn_prep_deck.setStyleSheet(f"background: {PRIMARY_BLUE};")
         else:
-            self.lala_panel.hide()
-            self.btn_lala.setStyleSheet("")
+            self.prep_deck_panel.hide()
+            self.btn_prep_deck.setStyleSheet("")
 
     # ========================================================================
     # LOGIC: UI CONTROL
