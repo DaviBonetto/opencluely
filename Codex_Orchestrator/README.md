@@ -34,6 +34,15 @@ Use `ARTIFACT_TEMPLATES` to keep every agent output in a stable shape before imp
 - the runbook and prompts reference the matching template for each agent
 - if a section does not apply, mark it `N/A` instead of deleting it
 
+## Filled Phase 0 Artifacts
+
+The current Phase 0 outputs live in `Phase_0_Audit_and_Cleanup/`:
+
+- `01_LEGACY_AUDIT_MATRIX_FILLED.md`
+- `01_LEGACY_AUDIT_HANDOFF.md`
+- `02_REFERENCE_IMAGE_FRAMEWORK_FILLED.md`
+- `02_REFERENCE_IMAGE_HANDOFF.md`
+
 ## Reference Image Categories
 
 Use the uncategorized files in `Imagens_Referência` with this mapping:
