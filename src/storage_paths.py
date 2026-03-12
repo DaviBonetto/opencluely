@@ -33,6 +33,6 @@ def get_seed_file(filename: str) -> Path:
     return CONFIG_DIR / filename
 
 
-def build_log_file(prefix: str = "parakeet") -> Path:
+def build_log_file(prefix: str = "opencluely") -> Path:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return get_logs_dir() / f"{prefix}_{timestamp}.log"
