@@ -31,6 +31,35 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 
+def load_brand_fonts(app) -> None:
+    """Load bundled brand fonts so the wordmark stays stable across machines."""
+    try:
+        from PyQt5.QtGui import QFont, QFontDatabase
+    except ImportError:
+        logger.warning("PyQt5 font helpers are unavailable; skipping bundled font loading")
+        return
+
+    fonts_dir = PROJECT_ROOT / "assets" / "fonts"
+    font_path = fonts_dir / "InterVariable.ttf"
+    font_family = "Inter"
+
+    if font_path.exists():
+        font_id = QFontDatabase.addApplicationFont(str(font_path))
+        if font_id != -1:
+            families = QFontDatabase.applicationFontFamilies(font_id)
+            if families:
+                font_family = families[0]
+                logger.info("Loaded bundled font family: %s", font_family)
+        else:
+            logger.warning("Failed to register bundled font: %s", font_path)
+    else:
+        logger.warning("Bundled Inter font not found at %s", font_path)
+
+    app.setProperty("opencluely_wordmark_family", font_family)
+    app.setProperty("opencluely_ui_family", font_family)
+    app.setFont(QFont(font_family, 10))
+
+
 def check_environment() -> bool:
     """Validate a minimal runtime environment before booting the UI."""
     logger.info("Checking runtime environment")
@@ -91,6 +120,7 @@ def main() -> int:
         app.setApplicationName("Opencluely")
         app.setApplicationVersion("1.0.0")
         app.setQuitOnLastWindowClosed(False)
+        load_brand_fonts(app)
 
         def on_session_started(session_context: dict) -> None:
             logger.info("Session started with profile: %s", session_context.get("profile_name"))
