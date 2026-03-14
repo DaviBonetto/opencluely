@@ -1,4 +1,4 @@
-"""Opencluely Context Vault panel."""
+"""Opencluely Prep Deck panel."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ logger = logging.getLogger("context_vault_panel")
 
 
 class ContextPromptItem(QFrame):
-    """Accordion card for a single context prompt."""
+    """Accordion card for a single Prep Deck item."""
 
     item_updated = pyqtSignal(str, str, str)
     item_deleted = pyqtSignal(str)
@@ -140,7 +140,7 @@ class ContextPromptItem(QFrame):
         self.btn_delete.setFixedSize(68, 30)
         self.btn_delete.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_delete.setStyleSheet(cv_styles.DELETE_BUTTON_STYLE)
-        self.btn_delete.setToolTip("Delete this prompt")
+        self.btn_delete.setToolTip("Delete this Prep Deck item")
         self.btn_delete.clicked.connect(lambda: self.item_deleted.emit(self.item_id))
         action_bar.addWidget(self.btn_delete)
         action_bar.addStretch()
@@ -232,7 +232,7 @@ class ContextPromptItem(QFrame):
 
 
 class ContextVaultPanel(QFrame):
-    """Standalone floating panel for the Context Vault."""
+    """Standalone floating panel for the Prep Deck."""
 
     closed = pyqtSignal()
 
@@ -264,16 +264,16 @@ class ContextVaultPanel(QFrame):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(20, 0, 20, 0)
 
-        title = QLabel("Context Vault")
+        title = QLabel("Prep Deck")
         title.setStyleSheet(cv_styles.VAULT_TITLE_STYLE)
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        self.counter_label = QLabel("0 prompts")
+        self.counter_label = QLabel("0 deck items")
         self.counter_label.setStyleSheet(cv_styles.VAULT_COUNTER_STYLE)
         header_layout.addWidget(self.counter_label)
 
-        btn_add = QPushButton("New Prompt")
+        btn_add = QPushButton("New Deck Item")
         btn_add.setCursor(QCursor(Qt.PointingHandCursor))
         btn_add.setStyleSheet(cv_styles.VAULT_ADD_BUTTON_STYLE)
         btn_add.clicked.connect(self.add_prompt)
@@ -343,7 +343,7 @@ class ContextVaultPanel(QFrame):
         self.prompt_widgets.append(widget)
 
     def add_prompt(self):
-        title, ok = QInputDialog.getText(self, "New Context Prompt", "Title:", flags=Qt.WindowStaysOnTopHint)
+        title, ok = QInputDialog.getText(self, "New Prep Deck Item", "Title:", flags=Qt.WindowStaysOnTopHint)
         if ok and title.strip():
             self.manager.add(title.strip())
             self.load_prompts()
@@ -374,7 +374,7 @@ class ContextVaultPanel(QFrame):
             self.load_prompts()
 
     def update_counter(self):
-        self.counter_label.setText(f"{len(self.manager.get_all())} prompts")
+        self.counter_label.setText(f"{len(self.manager.get_all())} deck items")
 
     def close_panel(self):
         self.hide()
