@@ -93,7 +93,7 @@ def check_environment() -> bool:
 
 
 def main() -> int:
-    """Create the Qt app, open Launchpad, and launch Live Bar."""
+    """Create the Qt app and launch the Live Bar immediately."""
     print()
     print("=" * 50)
     print("  Opencluely")
@@ -110,7 +110,6 @@ def main() -> int:
 
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication
-        from ui.launchpad import LaunchpadWindow
         from ui.live_bar import LiveBar
 
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -119,24 +118,19 @@ def main() -> int:
         app = QApplication(sys.argv)
         app.setApplicationName("Opencluely")
         app.setApplicationVersion("1.0.0")
-        app.setQuitOnLastWindowClosed(False)
+        app.setQuitOnLastWindowClosed(True)
         load_brand_fonts(app)
+        session_context = {
+            "profile_name": "Before Meeting",
+            "brief_name": "General",
+            "system_instructions": "",
+            "user_context": "",
+            "language": "pt-BR",
+        }
 
-        def on_session_started(session_context: dict) -> None:
-            logger.info("Session started with profile: %s", session_context.get("profile_name"))
-            overlay = LiveBar()
-
-            if hasattr(overlay, "set_session_data"):
-                overlay.set_session_data(session_context)
-            else:
-                logger.warning("LiveBar does not expose set_session_data")
-
-            overlay.show()
-            app.overlay = overlay
-
-        launchpad = LaunchpadWindow()
-        launchpad.session_started.connect(on_session_started)
-        launchpad.show()
+        overlay = LiveBar(session_context)
+        overlay.show()
+        app.overlay = overlay
 
         logger.info("Entering Qt event loop")
         return app.exec_()
