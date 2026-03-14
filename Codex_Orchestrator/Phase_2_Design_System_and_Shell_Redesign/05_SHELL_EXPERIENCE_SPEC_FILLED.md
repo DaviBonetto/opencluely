@@ -4,85 +4,142 @@
 
 - Primary surfaces:
   - Session Launchpad
-  - Live Bar
-  - Transcript and response stack
-  - Notes panel
-  - Prep Deck panel
+  - Live Bar capsule
+  - Expanded live sheet with `Ask` and `Transcript`
+  - Session Notes utility panel
+  - Prep Deck floating utility panel
 - Window model:
-  - Always-on-top floating shell with expandable content region and independent supporting panels
+  - Always-on-top floating shell with a compact collapsed state and a glassy expanded sheet below the capsule
 - Navigation model:
-  - Launchpad enters the live session, then the live bar becomes the persistent control surface
+  - `Launchpad -> Live Bar -> Debrief`
+  - Launchpad is the entry surface, Live Bar is the persistent live control surface, Debrief is the post-session destination
 
 ## Surface Breakdown
 
 | Surface | Purpose | Always Visible | Key Interactions | Notes |
 | --- | --- | --- | --- | --- |
-| Session Launchpad | Configure the next live session | no | choose brief, language, context, launch | Entry point only |
-| Live Bar | Persistent command capsule during a session | yes | record, assist, screen scan, ask, open notes, open Prep Deck | Premium compact shell |
-| Transcript region | Show live captured text | no | expand, read, clear | Must stay readable at small heights |
-| Response stack | Show Assist and Screen output cards | no | scroll, copy, compare | Cards sit below transcript |
-| Notes panel | Quick persistent scratchpad | no | open, edit, hide | Utility panel, not primary nav |
-| Prep Deck panel | Curated pre-session material | no | open, reorder, edit, complete | Independent floating surface |
+| Session Launchpad | Configure the next live session | no | choose brief, language, context, launch | Must feel visually related to the shell but remain a separate flow |
+| Live Bar capsule | Persistent command surface during a session | yes | listen/stop, expand/collapse, open notes, open Prep Deck, overflow, close | Compact-first, premium, and calm |
+| Expanded live sheet | Main live working area | no | switch between `Ask` and `Transcript`, use suggestions, read outputs, type prompts | Opens directly under the capsule |
+| Ask surface | Grounded assistance workspace | no | Assist, What should I say next, Follow-up, Recap, Screen, composer send | Evidence-informed suggestions, not generic chat chrome |
+| Transcript surface | Review live transcript | no | read, clear, load context | Transcript-led, low-noise layout |
+| Session Notes | Persistent scratchpad | no | select note, edit, rename, delete, hide | Utility surface only, never primary navigation |
+| Prep Deck | Curated live-prep material | no | open floating panel, browse items, edit items | Secondary support panel, not part of the top-level shell hierarchy |
 
 ## Live Bar Anatomy
 
 - Left zone:
-  - Opencluely wordmark only
-  - recording indicator
-  - microphone control
-- Center zone:
-  - primary action pills: `Assist`, `Screen`, `Ask`
-  - these are the behavioral center of gravity
-- Right zone:
-  - clear transcript
-  - notes
-  - Prep Deck
-  - timer
+  - `Opencluely` wordmark only
+  - Inter Semibold
+  - tracking `-0.07`
+  - no icon, mascot, avatar, or chip attached to the wordmark
+- Session zone:
+  - separate session chip fed by `brief_name` or `profile_name`
+  - optional live indicator and timer appear beside it while recording
+- Control zone:
+  - `Listen` / `Stop`
+  - `Open` / `Hide`
+  - grouped inside a segmented capsule block
+- Utility zone:
+  - `Notes`
+  - `Prep Deck`
+  - overflow
   - close
-- Secondary rail:
-  - expanded transcript, response cards, and chat composer
+- Expanded sheet:
+  - header strip with `Ask` and `Transcript`
+  - active tab styling must stay quiet and legible
+- Suggestion rail:
+  - visible only on `Ask`
+  - order:
+    - `Assist`
+    - `What should I say next?`
+    - `Follow-up`
+    - `Recap`
+    - `Screen`
 - Composer behavior:
-  - hidden when collapsed
-  - one-line prompt field with immediate send affordance
-  - prompt tone must stay operational, not conversationally cute
+  - one-line field anchored at the bottom of `Ask`
+  - circular send CTA on the right
+  - prompt tone stays operational, not playful
 
 ## State Model
 
 | State | Trigger | Visual Change | User Action |
 | --- | --- | --- | --- |
-| idle | shell opened | capsule calm, no pulse | start capture or expand shell |
-| listening | microphone active | red live indicator, timer running | continue or stop capture |
-| thinking | Assist running | primary action disabled, label reflects work | wait or read prior cards |
-| scanning | Screen analysis running | Screen action disabled, transcript placeholder updates | wait for returned card |
-| expanded | user opens content | transcript and cards appear | ask follow-up or review output |
-| notes-open | notes toggled | notes panel expands below shell | type or collapse |
-| prep-open | Prep Deck toggled | floating panel appears centered | review or edit prompts |
-| error | provider failure | inline copy explains failure without theatrics | retry or continue manually |
+| idle | shell opened | capsule calm, sheet hidden, no pulse | expand or start listening |
+| listening | microphone active | live badge visible, timer visible, `Listen` becomes `Stop` | continue or stop capture |
+| expanded.ask | user opens the sheet into Ask | suggestion rail, response stack, composer appear | request guidance or type prompt |
+| expanded.transcript | user switches to Transcript | transcript surface becomes primary | review evidence, clear, or load context |
+| thinking | Assist request running | Assist becomes `Working...`, rail actions and send CTA disable | wait for grounded output |
+| scanning | Screen request running | Screen becomes `Scanning...`, sheet stays open | wait for returned result |
+| notes-open | Notes toggled | notes utility panel appears below the sheet | edit notes or hide |
+| prep-open | Prep Deck toggled | floating panel opens centered on screen | browse or edit deck items |
+| error | provider or runtime failure | stable inline error card, no shake animation | retry or continue manually |
 
 ## Motion Rules
 
-- entry:
-  - shell appears without bounce; soft opacity and scale only
-- hover:
-  - buttons lift subtly through border intensity and panel brightness, not large movement
-- focus:
-  - focus states use blue outline and contrast shift, never glow spam
-- error:
-  - no shake animation; use clear state swap and stable messaging
+- Entry:
+  - shell enters with soft opacity and slight scale only
+  - no bounce
+- Hover:
+  - use border intensity and panel brightness changes, not positional jumps
+- Focus:
+  - visible blue focus treatment on all actionable controls
+  - focus must remain legible on dark glass
+- Expand/collapse:
+  - calm reveal of the sheet below the capsule
+  - no large travel distances
+- Error:
+  - plain state swap and explanatory copy
+  - never shake or flash
 
 ## Desktop-Native Rules
 
-- hit targets:
-  - minimum 30 px in live bar, 40 px in launch surfaces
-- window behavior:
-  - drag only from the top capsule
-  - support compact always-on-top behavior without stealing focus aggressively
-- blur limits:
-  - use restrained glass treatment; readability wins over spectacle
-- always-on-top behavior:
-  - shell stays available during other workflows but must not feel invasive
+- Hit targets:
+  - capsule controls: 36-40 px minimum
+  - expanded surfaces: 40-44 px minimum
+- Dragging:
+  - drag only from non-interactive space inside the top capsule
+  - never drag from buttons, inputs, or dropdowns
+- Window behavior:
+  - always on top
+  - compact-first
+  - expands downward rather than becoming a large floating dashboard immediately
+- Glass treatment:
+  - simulated material only
+  - dark navy body
+  - frosted blue border
+  - restrained shadow
+  - readability wins over blur spectacle
+- Hierarchy:
+  - capsule first
+  - sheet header second
+  - suggestion rail third
+  - transcript evidence fourth
+  - generated response cards fifth
+  - utilities last
+
+## Accessibility And Focus Behavior
+
+- Icon-only controls must expose tooltip and accessible name
+- Wordmark is not in the tab order
+- Keyboard order:
+  - session chip
+  - listen/stop
+  - expand/collapse
+  - `Ask`
+  - `Transcript`
+  - suggestion rail
+  - composer
+  - notes
+  - Prep Deck
+  - overflow
+  - close
+- `Escape` behavior:
+  - first closes Prep Deck if open
+  - then hides Notes if open
+  - then collapses the expanded sheet
+  - does not abruptly end the session
 
 ## Open Questions
 
-- question:
-  - Should future versions add a contextual suggestion rail beneath the main action pills, or keep the current shell density fixed for focus?
+- none
