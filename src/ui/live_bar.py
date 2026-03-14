@@ -763,8 +763,9 @@ class LiveBar(QMainWindow):
 
     @staticmethod
     def _make_dot_label() -> QLabel:
-        dot = QLabel("●")
+        dot = QLabel("\u2022")
         dot.setObjectName("quick_action_dot")
+        dot.setAccessibleName("Quick action separator")
         return dot
 
     @staticmethod
