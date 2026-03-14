@@ -4,7 +4,7 @@
 
 - Agent: Agent 05 - Shell Experience Designer
 - Phase: Phase 2 - Design System and Shell Redesign
-- Date: 2026-03-11
+- Date: 2026-03-12
 - Status: Ready for approval
 
 ## Inputs Consumed
@@ -22,19 +22,22 @@
   - `TARGET_TRANSCRIPT_CHAT`
 - Key assumptions:
   - Windows-native quality matters more than novelty
-  - The shell should stay compact until the operator explicitly expands it
-  - Support panels remain secondary and independent from the main capsule
+  - The shell stays compact until the operator explicitly expands it
+  - The wordmark remains text-only
+  - The suggestion rail belongs only to the expanded `Ask` surface
 
 ## What Was Produced
 
 - Primary artifact:
   - `Codex_Orchestrator/Phase_2_Design_System_and_Shell_Redesign/05_SHELL_EXPERIENCE_SPEC_FILLED.md`
 - Secondary notes:
-  - Clarified zone anatomy, state model, and motion rules for the live shell
+  - Locked the top capsule structure, expanded sheet behavior, keyboard order, and motion rules
 - Decisions locked:
-  - The live bar is the persistent core surface
-  - The launchpad is a separate entry surface
-  - Notes and Prep Deck remain secondary utilities, not top-level nav destinations
+  - `Opencluely` wordmark is pure text on the left
+  - profile context is a separate chip
+  - session controls stay compact in the capsule
+  - `Ask` and `Transcript` are tabs inside the expanded sheet
+  - Notes and Prep Deck remain utility surfaces, not top-level navigation
 
 ## Open Risks
 
@@ -42,13 +45,13 @@
 - Impact: Code-heavy answer surfaces may still need interpretation by the component lead.
 - Recommended owner: Design Token and Component Lead
 
-- Risk: The shell can become too dense if more actions are added without hierarchy controls.
+- Risk: The shell can still become too dense if new actions are added directly to the capsule.
 - Impact: Readability and discoverability will degrade on smaller screens.
 - Recommended owner: Workflow Architect plus UI maintainers
 
 ## Blockers
 
-- Blocker: No blocker for shell planning approval
+- Blocker: No blocker for shell approval
 - What is missing: A canonical code-display reference for later component-level decisions
 - Best next action: Approve the shell structure and let the component lead lock token and code-surface rules
 
@@ -59,14 +62,16 @@
   - Agent 07 - Workflow Architect
 - What they can trust as stable:
   - Surface hierarchy
-  - Live bar anatomy
-  - State and motion expectations
+  - Live Bar capsule anatomy
+  - Expanded `Ask` and `Transcript` split
+  - Accessibility and focus behavior
 - What they must not reinterpret:
-  - The live bar is compact-first
-  - The wordmark stays text-only
-  - Utility panels stay secondary
+  - the wordmark is text-only
+  - the shell is compact-first
+  - the suggestion rail appears only in expanded `Ask`
+  - utility panels stay secondary
 - What still needs approval:
-  - Future suggestion rail behavior
+  - no structural shell question remains open
 
 ## Verification
 
@@ -74,6 +79,7 @@
   - Brand and naming alignment
   - Reference-image alignment
   - Product lifecycle consistency check
+  - Shell-to-implementation parity check
 - Gaps found:
   - Missing canonical code-display reference
 - Ready for approval: Yes
