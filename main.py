@@ -31,6 +31,35 @@ logging.basicConfig(
 logger = logging.getLogger("main")
 
 
+def load_brand_fonts(app) -> None:
+    """Load bundled brand fonts so the wordmark stays stable across machines."""
+    try:
+        from PyQt5.QtGui import QFont, QFontDatabase
+    except ImportError:
+        logger.warning("PyQt5 font helpers are unavailable; skipping bundled font loading")
+        return
+
+    fonts_dir = PROJECT_ROOT / "assets" / "fonts"
+    font_path = fonts_dir / "InterVariable.ttf"
+    font_family = "Inter"
+
+    if font_path.exists():
+        font_id = QFontDatabase.addApplicationFont(str(font_path))
+        if font_id != -1:
+            families = QFontDatabase.applicationFontFamilies(font_id)
+            if families:
+                font_family = families[0]
+                logger.info("Loaded bundled font family: %s", font_family)
+        else:
+            logger.warning("Failed to register bundled font: %s", font_path)
+    else:
+        logger.warning("Bundled Inter font not found at %s", font_path)
+
+    app.setProperty("opencluely_wordmark_family", font_family)
+    app.setProperty("opencluely_ui_family", font_family)
+    app.setFont(QFont(font_family, 10))
+
+
 def check_environment() -> bool:
     """Validate a minimal runtime environment before booting the UI."""
     logger.info("Checking runtime environment")
@@ -64,7 +93,7 @@ def check_environment() -> bool:
 
 
 def main() -> int:
-    """Create the Qt app, open Launchpad, and launch Live Bar."""
+    """Create the Qt app and launch the Live Bar immediately."""
     print()
     print("=" * 50)
     print("  Opencluely")
@@ -81,7 +110,6 @@ def main() -> int:
 
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication
-        from ui.launchpad import LaunchpadWindow
         from ui.live_bar import LiveBar
 
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -90,23 +118,19 @@ def main() -> int:
         app = QApplication(sys.argv)
         app.setApplicationName("Opencluely")
         app.setApplicationVersion("1.0.0")
-        app.setQuitOnLastWindowClosed(False)
+        app.setQuitOnLastWindowClosed(True)
+        load_brand_fonts(app)
+        session_context = {
+            "profile_name": "Before Meeting",
+            "brief_name": "General",
+            "system_instructions": "",
+            "user_context": "",
+            "language": "pt-BR",
+        }
 
-        def on_session_started(session_context: dict) -> None:
-            logger.info("Session started with profile: %s", session_context.get("profile_name"))
-            overlay = LiveBar()
-
-            if hasattr(overlay, "set_session_data"):
-                overlay.set_session_data(session_context)
-            else:
-                logger.warning("LiveBar does not expose set_session_data")
-
-            overlay.show()
-            app.overlay = overlay
-
-        launchpad = LaunchpadWindow()
-        launchpad.session_started.connect(on_session_started)
-        launchpad.show()
+        overlay = LiveBar(session_context)
+        overlay.show()
+        app.overlay = overlay
 
         logger.info("Entering Qt event loop")
         return app.exec_()

@@ -1,4 +1,4 @@
-"""Opencluely Context Vault panel."""
+"""Opencluely Prep Deck panel."""
 
 from __future__ import annotations
 
@@ -15,14 +15,20 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
+
+try:
+    from ui.styles import context_vault_styles as cv_styles
+except ImportError:
+    from src.ui.styles import context_vault_styles as cv_styles
 
 
 logger = logging.getLogger("context_vault_panel")
 
 
 class ContextPromptItem(QFrame):
-    """Accordion card for a single context prompt."""
+    """Accordion card for a single Prep Deck item."""
 
     item_updated = pyqtSignal(str, str, str)
     item_deleted = pyqtSignal(str)
@@ -62,22 +68,19 @@ class ContextPromptItem(QFrame):
         header.setSpacing(12)
 
         self.num_label = QLabel(f"{self.number:02d}")
-        self.num_label.setStyleSheet(
-            "color: #0a84ff; font-size: 18px; font-weight: bold;"
-            "background: #1a2a3a; padding: 4px 10px; border-radius: 6px;"
-        )
+        self.num_label.setStyleSheet(cv_styles.NUM_LABEL_STYLE)
         self.num_label.setFixedWidth(45)
         self.num_label.setAlignment(Qt.AlignCenter)
         header.addWidget(self.num_label)
 
         self.expand_icon = QLabel("▶")
-        self.expand_icon.setStyleSheet("color: #666; font-size: 14px;")
+        self.expand_icon.setStyleSheet(cv_styles.EXPAND_COLLAPSED)
         self.expand_icon.setFixedWidth(18)
         header.addWidget(self.expand_icon)
 
         clean_title = title.replace(f"{self.number}. ", "").replace(f"{self.number}.", "")
         self.title_label = QLabel(clean_title)
-        self.title_label.setStyleSheet("color: #ffffff; font-size: 16px; font-weight: 500;")
+        self.title_label.setStyleSheet(cv_styles.TITLE_STYLE)
         self.title_label.setWordWrap(True)
         self.title_label.setCursor(QCursor(Qt.PointingHandCursor))
         self.title_label.mousePressEvent = lambda event: self.toggle_expand()
@@ -103,9 +106,7 @@ class ContextPromptItem(QFrame):
         self.btn_up.setFixedSize(24, 24)
         self.btn_up.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_up.setToolTip("Move up")
-        self.btn_up.setStyleSheet(
-            "background: #333; color: #aaa; border-radius: 4px; font-size: 14px; font-weight: bold;"
-        )
+        self.btn_up.setStyleSheet(cv_styles.BTN_MOVE_STYLE)
         self.btn_up.clicked.connect(lambda: self.move_up_requested.emit(self.item_id))
         header.addWidget(self.btn_up)
 
@@ -113,14 +114,12 @@ class ContextPromptItem(QFrame):
         self.btn_down.setFixedSize(24, 24)
         self.btn_down.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_down.setToolTip("Move down")
-        self.btn_down.setStyleSheet(
-            "background: #333; color: #aaa; border-radius: 4px; font-size: 14px; font-weight: bold;"
-        )
+        self.btn_down.setStyleSheet(cv_styles.BTN_MOVE_STYLE)
         self.btn_down.clicked.connect(lambda: self.move_down_requested.emit(self.item_id))
         header.addWidget(self.btn_down)
 
         self.status_dot = QLabel("●")
-        self.status_dot.setStyleSheet(f"color: {'#4ade80' if content else '#666'}; font-size: 10px;")
+        self.status_dot.setStyleSheet(cv_styles.status_dot_color(bool(content)))
         header.addWidget(self.status_dot)
 
         layout.addLayout(header)
@@ -133,17 +132,15 @@ class ContextPromptItem(QFrame):
         action_bar = QHBoxLayout()
         self.btn_edit = QPushButton("Edit")
         self.btn_edit.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_edit.setStyleSheet("background: #333; border-radius: 6px; padding: 6px 12px; color: #ccc;")
+        self.btn_edit.setStyleSheet(cv_styles.EDIT_BUTTON_STYLE)
         self.btn_edit.clicked.connect(self.toggle_edit)
         action_bar.addWidget(self.btn_edit)
 
         self.btn_delete = QPushButton("Delete")
         self.btn_delete.setFixedSize(68, 30)
         self.btn_delete.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_delete.setStyleSheet(
-            "background: #3a2a2a; color: #f3d6d6; border-radius: 6px; padding: 0 10px;"
-        )
-        self.btn_delete.setToolTip("Delete this prompt")
+        self.btn_delete.setStyleSheet(cv_styles.DELETE_BUTTON_STYLE)
+        self.btn_delete.setToolTip("Delete this Prep Deck item")
         self.btn_delete.clicked.connect(lambda: self.item_deleted.emit(self.item_id))
         action_bar.addWidget(self.btn_delete)
         action_bar.addStretch()
@@ -154,27 +151,20 @@ class ContextPromptItem(QFrame):
         self.content_label.setPlaceholderText("No notes yet.")
         if content:
             self.content_label.setPlainText(content)
-        self.content_label.setStyleSheet(
-            "QTextEdit { background: #222; color: #e0e0e0; font-size: 16px; padding: 15px;"
-            "border: none; border-radius: 8px; border-left: 4px solid #0a84ff; }"
-        )
+        self.content_label.setStyleSheet(cv_styles.CONTENT_VIEW_STYLE)
         self.content_label.setMinimumHeight(120)
         content_layout.addWidget(self.content_label)
 
         self.content_editor = QTextEdit()
         self.content_editor.setPlainText(content)
         self.content_editor.setVisible(False)
-        self.content_editor.setStyleSheet(
-            "QTextEdit { background: #1a1a1a; border: 2px solid #0a84ff; font-size: 15px; padding: 10px; color: white; }"
-        )
+        self.content_editor.setStyleSheet(cv_styles.CONTENT_EDIT_STYLE)
         self.content_editor.setMinimumHeight(120)
         content_layout.addWidget(self.content_editor)
 
         self.btn_save = QPushButton("Save")
         self.btn_save.setVisible(False)
-        self.btn_save.setStyleSheet(
-            "background: #22c55e; color: white; padding: 8px; border-radius: 6px; font-weight: bold;"
-        )
+        self.btn_save.setStyleSheet(cv_styles.SAVE_BUTTON_STYLE)
         self.btn_save.setCursor(QCursor(Qt.PointingHandCursor))
         self.btn_save.clicked.connect(self.save_content)
         content_layout.addWidget(self.btn_save)
@@ -186,7 +176,7 @@ class ContextPromptItem(QFrame):
         self.content_frame.setVisible(self.is_expanded)
         self.expand_icon.setText("▼" if self.is_expanded else "▶")
         self.expand_icon.setStyleSheet(
-            f"color: {'#0a84ff' if self.is_expanded else '#666'}; font-size: 14px;"
+            cv_styles.EXPAND_EXPANDED if self.is_expanded else cv_styles.EXPAND_COLLAPSED
         )
 
     def toggle_edit(self):
@@ -199,56 +189,26 @@ class ContextPromptItem(QFrame):
     def save_content(self):
         new_content = self.content_editor.toPlainText()
         self.content_label.setPlainText(new_content)
-        self.status_dot.setStyleSheet(f"color: {'#4ade80' if new_content else '#666'}; font-size: 10px;")
+        self.status_dot.setStyleSheet(cv_styles.status_dot_color(bool(new_content)))
         self.item_updated.emit(self.item_id, self.title_label.text(), new_content)
         self.toggle_edit()
 
     def update_card_style(self):
-        if self.is_starred:
-            bg_color = "#2a2a1a"
-            border_color = "#f59e0b"
-            hover_bg = "#3a3a2a"
-        elif self.is_completed:
-            bg_color = "#1a2a1a"
-            border_color = "#22c55e"
-            hover_bg = "#2a3a2a"
-        else:
-            bg_color = "#1a1a1a"
-            border_color = "#2a2a2a"
-            hover_bg = "#202020"
-
-        self.setStyleSheet(
-            f"""
-            QFrame#context_prompt_item {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
-                border-radius: 10px;
-                margin: 3px 0;
-            }}
-            QFrame#context_prompt_item:hover {{
-                border-color: #444;
-                background-color: {hover_bg};
-            }}
-            """
-        )
+        self.setStyleSheet(cv_styles.card_style(self.is_starred, self.is_completed))
 
     def update_star_style(self):
         if self.is_starred:
-            self.btn_star.setStyleSheet("background: #f59e0b; color: #000; border-radius: 6px; font-size: 16px;")
+            self.btn_star.setStyleSheet(cv_styles.STAR_ON)
             self.btn_star.setText("★")
         else:
-            self.btn_star.setStyleSheet("background: #333; color: #888; border-radius: 6px; font-size: 16px;")
+            self.btn_star.setStyleSheet(cv_styles.STAR_OFF)
             self.btn_star.setText("☆")
 
     def update_check_style(self):
         if self.is_completed:
-            self.btn_check.setStyleSheet(
-                "background: #22c55e; color: #fff; border-radius: 6px; font-size: 14px; font-weight: bold;"
-            )
+            self.btn_check.setStyleSheet(cv_styles.CHECK_ON)
         else:
-            self.btn_check.setStyleSheet(
-                "background: #333; color: #666; border-radius: 6px; font-size: 14px; font-weight: bold;"
-            )
+            self.btn_check.setStyleSheet(cv_styles.CHECK_OFF)
 
     def toggle_star(self):
         self.is_starred = not self.is_starred
@@ -272,7 +232,7 @@ class ContextPromptItem(QFrame):
 
 
 class ContextVaultPanel(QFrame):
-    """Standalone floating panel for the Context Vault."""
+    """Standalone floating panel for the Prep Deck."""
 
     closed = pyqtSignal()
 
@@ -292,45 +252,37 @@ class ContextVaultPanel(QFrame):
         self.setObjectName("context_vault_panel")
         self.setMinimumSize(450, 400)
         self.setMouseTracking(True)
-        self.setStyleSheet(
-            """
-            QFrame#context_vault_panel {
-                background-color: #0d0d0d;
-                border: 2px solid #333;
-                border-radius: 16px;
-            }
-            """
-        )
+        self.setStyleSheet(cv_styles.VAULT_PANEL_STYLE)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         header = QFrame()
-        header.setStyleSheet("background: #1a1a1a; border-radius: 16px 16px 0 0;")
+        header.setStyleSheet(cv_styles.VAULT_HEADER_STYLE)
         header.setFixedHeight(60)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(20, 0, 20, 0)
 
-        title = QLabel("Context Vault")
-        title.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        title = QLabel("Prep Deck")
+        title.setStyleSheet(cv_styles.VAULT_TITLE_STYLE)
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        self.counter_label = QLabel("0 prompts")
-        self.counter_label.setStyleSheet("color: #888; font-size: 12px; margin-right: 15px;")
+        self.counter_label = QLabel("0 deck items")
+        self.counter_label.setStyleSheet(cv_styles.VAULT_COUNTER_STYLE)
         header_layout.addWidget(self.counter_label)
 
-        btn_add = QPushButton("New Prompt")
+        btn_add = QPushButton("New Deck Item")
         btn_add.setCursor(QCursor(Qt.PointingHandCursor))
-        btn_add.setStyleSheet("background: #22c55e; color: white; border-radius: 6px; padding: 6px 12px; font-weight: bold;")
+        btn_add.setStyleSheet(cv_styles.VAULT_ADD_BUTTON_STYLE)
         btn_add.clicked.connect(self.add_prompt)
         header_layout.addWidget(btn_add)
 
         btn_close = QPushButton("✕")
         btn_close.setCursor(QCursor(Qt.PointingHandCursor))
         btn_close.setFixedSize(30, 30)
-        btn_close.setStyleSheet("background: #333; color: #aaa; border-radius: 15px; font-size: 14px; margin-left: 10px;")
+        btn_close.setStyleSheet(cv_styles.VAULT_CLOSE_BUTTON_STYLE)
         btn_close.clicked.connect(self.close_panel)
         header_layout.addWidget(btn_close)
 
@@ -338,7 +290,7 @@ class ContextVaultPanel(QFrame):
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; } QScrollBar:vertical { background: #111; width: 10px; }")
+        scroll.setStyleSheet(cv_styles.VAULT_SCROLL_STYLE)
 
         self.container = QWidget()
         self.container.setStyleSheet("background: transparent;")
@@ -352,7 +304,7 @@ class ContextVaultPanel(QFrame):
 
         grip = QLabel("⋮⋮")
         grip.setAlignment(Qt.AlignCenter)
-        grip.setStyleSheet("color: #444; font-size: 12px; padding: 2px;")
+        grip.setStyleSheet(cv_styles.VAULT_GRIP_STYLE)
         layout.addWidget(grip)
 
     def load_prompts(self):
@@ -391,7 +343,7 @@ class ContextVaultPanel(QFrame):
         self.prompt_widgets.append(widget)
 
     def add_prompt(self):
-        title, ok = QInputDialog.getText(self, "New Context Prompt", "Title:", flags=Qt.WindowStaysOnTopHint)
+        title, ok = QInputDialog.getText(self, "New Prep Deck Item", "Title:", flags=Qt.WindowStaysOnTopHint)
         if ok and title.strip():
             self.manager.add(title.strip())
             self.load_prompts()
@@ -422,7 +374,7 @@ class ContextVaultPanel(QFrame):
             self.load_prompts()
 
     def update_counter(self):
-        self.counter_label.setText(f"{len(self.manager.get_all())} prompts")
+        self.counter_label.setText(f"{len(self.manager.get_all())} deck items")
 
     def close_panel(self):
         self.hide()

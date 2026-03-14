@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 import os
 
-from PyQt5.QtCore import QPoint, QTimer, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QCursor, QMouseEvent
+from PyQt5.QtCore import QEvent, QPoint, QSize, QTimer, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QCursor, QFont, QIcon, QKeySequence, QMouseEvent
 from PyQt5.QtWidgets import (
     QAction,
     QApplication,
@@ -23,6 +23,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QShortcut,
+    QStackedWidget,
     QStyle,
     QSystemTrayIcon,
     QTextEdit,
@@ -96,107 +98,14 @@ except ImportError:
 
 logger = logging.getLogger("live_bar")
 
+# ── Styles & icons are in src.ui.styles ──────────────────────
+try:
+    from ui.styles import LIVE_BAR_STYLESHEET, RESPONSE_ANSWER_STYLE, render_svg_icon
+except ImportError:
+    from src.ui.styles import LIVE_BAR_STYLESHEET, RESPONSE_ANSWER_STYLE, render_svg_icon
 
-LIVE_BAR_STYLESHEET = """
-QMainWindow, QWidget#central {
-    background: transparent;
-}
 
-QFrame#top_bar {
-    background-color: #171717;
-    border: 1px solid #2F2F2F;
-    border-radius: 22px;
-}
 
-QFrame#content_container, QFrame#context_container {
-    background-color: #101010;
-    border: 1px solid #242424;
-    border-radius: 16px;
-}
-
-QLabel {
-    color: #FFFFFF;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 13px;
-}
-
-QLabel#title_label {
-    font-size: 14px;
-    font-weight: 700;
-}
-
-QLabel#status_label {
-    color: #8F8F8F;
-    font-size: 12px;
-}
-
-QLabel#timer_label {
-    background-color: #000000;
-    border-radius: 8px;
-    color: #FFFFFF;
-    font-family: Consolas, monospace;
-    font-weight: 700;
-    padding: 4px 10px;
-}
-
-QPushButton {
-    background-color: #242424;
-    border: 1px solid #343434;
-    border-radius: 10px;
-    color: #E4E4E4;
-    font-size: 12px;
-    padding: 6px 12px;
-}
-
-QPushButton:hover {
-    background-color: #2D2D2D;
-    border-color: #444444;
-    color: #FFFFFF;
-}
-
-QPushButton#btn_primary {
-    background-color: #0A84FF;
-    border: none;
-    color: #FFFFFF;
-    font-weight: 700;
-}
-
-QPushButton#btn_recording {
-    background-color: #4A1717;
-    border: 1px solid #A43A3A;
-}
-
-QPushButton#btn_active {
-    background-color: #18311E;
-    border: 1px solid #2E8B57;
-}
-
-QTextEdit, QLineEdit, QComboBox {
-    background-color: #1B1B1B;
-    border: 1px solid #2E2E2E;
-    border-radius: 10px;
-    color: #F1F1F1;
-    font-size: 13px;
-    padding: 8px 10px;
-}
-
-QTextEdit#transcript_box {
-    background-color: #121212;
-    border: none;
-    padding: 12px;
-}
-
-QScrollArea {
-    background: transparent;
-    border: none;
-}
-
-QFrame#response_card {
-    background-color: #191919;
-    border: 1px solid #2E2E2E;
-    border-radius: 14px;
-}
-"""
 
 
 class ResponseCard(QFrame):
@@ -215,20 +124,23 @@ class ResponseCard(QFrame):
         self.setObjectName("response_card")
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(12)
 
         header = QHBoxLayout()
+        header.setSpacing(8)
         question_label = QLabel(self.question)
+        question_label.setObjectName("response_title")
         question_label.setWordWrap(True)
-        question_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #FFFFFF;")
         header.addWidget(question_label, 1)
 
         copy_button = QPushButton("Copy")
+        copy_button.setObjectName("card_button")
         copy_button.clicked.connect(lambda: self.copy_requested.emit(self.answer))
         header.addWidget(copy_button)
 
         delete_button = QPushButton("Remove")
+        delete_button.setObjectName("card_button")
         delete_button.clicked.connect(lambda: self.delete_requested.emit(self))
         header.addWidget(delete_button)
 
@@ -236,11 +148,8 @@ class ResponseCard(QFrame):
 
         answer_box = QTextEdit()
         answer_box.setReadOnly(True)
-        answer_box.setMinimumHeight(120)
-        answer_box.setStyleSheet(
-            "QTextEdit { background-color: #121212; border: 1px solid #252525; "
-            "border-radius: 10px; padding: 10px; color: #E7E7E7; }"
-        )
+        answer_box.setMinimumHeight(132)
+        answer_box.setStyleSheet(RESPONSE_ANSWER_STYLE)
         if hasattr(answer_box, "setMarkdown"):
             answer_box.setMarkdown(self.answer)
         else:
@@ -254,13 +163,16 @@ class LiveBar(QMainWindow):
     def __init__(self, session_context: dict | None = None):
         super().__init__()
         self.session_context = session_context or {}
+        self.current_profile_name = "Blank Brief"
         self.is_recording = False
         self.is_expanded = False
         self.is_dragging = False
-        self.is_resizing = False
         self.drag_position = QPoint()
-        self.resize_start_height = 0
-        self.min_height = 72
+        self.drag_hot_zone = None
+        self.active_surface = "ask"
+        self.vision_mode = "visible"
+        self.smart_mode = False
+        self.min_height = 92
         self.max_height = 860
         self.seconds = 0
         self.timer_rec = None
@@ -276,210 +188,635 @@ class LiveBar(QMainWindow):
         self.context_vault_manager = None
         self.context_vault_panel = None
         self.tray = None
+        self.escape_shortcut = None
+        self.suggestion_buttons = []
+        self.visual_only = True
         self.setup_window()
         self.setup_ui()
         self.setStyleSheet(LIVE_BAR_STYLESHEET)
-        self.setup_backend()
-        self.setup_tray()
-        self.setup_hotkey()
+        if not self.visual_only:
+            self.setup_backend()
+            self.setup_tray()
+            self.setup_hotkey()
         self.set_session_data(self.session_context)
 
     def setup_window(self) -> None:
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground)
         screen = QApplication.primaryScreen().availableGeometry()
-        width = int(screen.width() * 0.7)
-        x_pos = int((screen.width() - width) / 2)
-        self.setGeometry(x_pos, screen.y() + 20, width, self.min_height)
+        width = 744
+        height = 228
+        x_pos = screen.x() + (screen.width() - width) // 2
+        y_pos = screen.y() + 24
+        self.min_height = height
+        self.max_height = height
+        self.setGeometry(x_pos, y_pos, width, height)
 
     def setup_ui(self) -> None:
         self.central = QWidget()
         self.central.setObjectName("central")
         self.setCentralWidget(self.central)
 
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(28)
-        shadow.setColor(QColor(0, 0, 0, 170))
-        shadow.setOffset(0, 6)
-        self.central.setGraphicsEffect(shadow)
-
         self.main_layout = QVBoxLayout(self.central)
-        self.main_layout.setContentsMargins(12, 12, 12, 12)
+        self.main_layout.setContentsMargins(22, 12, 22, 12)
         self.main_layout.setSpacing(8)
+
+        self.top_row = QWidget()
+        self.top_row.setObjectName("top_row")
+        self.main_layout.addWidget(self.top_row, 0, Qt.AlignHCenter)
+
+        top_row_layout = QHBoxLayout(self.top_row)
+        top_row_layout.setContentsMargins(0, 0, 0, 0)
+        top_row_layout.setSpacing(8)
+        top_row_layout.addStretch()
 
         self.top_bar = QFrame()
         self.top_bar.setObjectName("top_bar")
-        self.top_bar.setFixedHeight(52)
-        self.main_layout.addWidget(self.top_bar)
+        self.top_bar.setAccessibleName("Opencluely controls")
+        self.top_bar.setFixedHeight(38)
+        top_row_layout.addWidget(self.top_bar)
+        self._apply_panel_shadow(self.top_bar, blur=16, y_offset=4)
 
         top_layout = QHBoxLayout(self.top_bar)
-        top_layout.setContentsMargins(14, 8, 14, 8)
-        top_layout.setSpacing(8)
+        top_layout.setContentsMargins(10, 4, 10, 4)
+        top_layout.setSpacing(9)
 
-        title_stack = QVBoxLayout()
-        title_stack.setSpacing(1)
-        self.title_label = QLabel("Opencluely Live Bar")
-        self.title_label.setObjectName("title_label")
-        title_stack.addWidget(self.title_label)
-        self.status_label = QLabel("Profile: General Copilot")
-        self.status_label.setObjectName("status_label")
-        title_stack.addWidget(self.status_label)
-        top_layout.addLayout(title_stack)
+        vision_group = self._make_segment("top_inner_group")
+        vision_layout = QHBoxLayout(vision_group)
+        vision_layout.setContentsMargins(2, 2, 2, 2)
+        vision_layout.setSpacing(2)
 
-        self.record_indicator = QLabel("REC")
-        self.record_indicator.setVisible(False)
-        self.record_indicator.setStyleSheet(
-            "color: #FF6B6B; font-size: 11px; font-weight: 700; "
-            "background: #2B1212; border-radius: 8px; padding: 3px 8px;"
+        self.btn_eye_mode = self._make_icon_button(
+            "glass_icon_button",
+            "eye",
+            "Visible screen mode",
+            tooltip="Use visible screen mode",
         )
-        top_layout.addWidget(self.record_indicator)
+        self.btn_eye_mode.clicked.connect(self._noop)
+        vision_layout.addWidget(self.btn_eye_mode)
 
-        self.btn_mic = QPushButton("Mic")
-        self.btn_mic.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_mic.clicked.connect(self.toggle_recording)
-        top_layout.addWidget(self.btn_mic)
+        self.btn_privacy_mode = self._make_icon_button(
+            "glass_icon_button",
+            "anonymous",
+            "Anonymous mode",
+            tooltip="Use anonymous mode",
+        )
+        self.btn_privacy_mode.clicked.connect(self._noop)
+        vision_layout.addWidget(self.btn_privacy_mode)
+        top_layout.addWidget(vision_group)
 
-        self.btn_assist = QPushButton("Assist")
-        self.btn_assist.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_assist.clicked.connect(self.on_assist)
-        top_layout.addWidget(self.btn_assist)
+        top_layout.addWidget(self._make_divider())
 
-        self.btn_screen_analysis = QPushButton("Screen Analysis")
-        self.btn_screen_analysis.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_screen_analysis.clicked.connect(self.on_screen_analysis)
-        top_layout.addWidget(self.btn_screen_analysis)
+        media_group = self._make_segment("top_inner_group")
+        media_layout = QHBoxLayout(media_group)
+        media_layout.setContentsMargins(2, 2, 2, 2)
+        media_layout.setSpacing(2)
 
-        self.btn_chat = QPushButton("Chat")
-        self.btn_chat.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_chat.clicked.connect(self.toggle_content_area)
-        top_layout.addWidget(self.btn_chat)
+        self.btn_pause = self._make_icon_button(
+            "glass_icon_button",
+            "pause",
+            "Toggle live listening",
+            tooltip="Start or stop live listening",
+        )
+        self.btn_pause.clicked.connect(self._noop)
+        media_layout.addWidget(self.btn_pause)
 
-        self.btn_context = QPushButton("Context")
-        self.btn_context.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_context.setToolTip("Show or hide Context")
-        self.btn_context.clicked.connect(self.toggle_notes)
-        top_layout.addWidget(self.btn_context)
-
-        self.btn_context_vault = QPushButton("Vault")
-        self.btn_context_vault.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_context_vault.setToolTip("Context Vault")
-        self.btn_context_vault.clicked.connect(self.toggle_context_vault_panel)
-        top_layout.addWidget(self.btn_context_vault)
-
-        top_layout.addStretch()
-
-        self.btn_clear = QPushButton("Clear")
-        self.btn_clear.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_clear.clicked.connect(self.clear_all)
-        top_layout.addWidget(self.btn_clear)
-
+        self.btn_stop_transport = self._make_icon_button(
+            "glass_icon_button",
+            "stop",
+            "Stop listening",
+            tooltip="Stop listening and clear active capture",
+        )
+        self.btn_stop_transport.clicked.connect(self._noop)
+        media_layout.addWidget(self.btn_stop_transport)
+        
+        self.record_indicator = QLabel("LIVE")
+        self.record_indicator.setObjectName("record_indicator")
+        self.record_indicator.hide()
+        media_layout.addWidget(self.record_indicator)
+        
         self.timer_label = QLabel("00:00")
         self.timer_label.setObjectName("timer_label")
-        self.timer_label.setVisible(False)
-        top_layout.addWidget(self.timer_label)
+        self.timer_label.hide()
+        media_layout.addWidget(self.timer_label)
 
-        self.btn_menu = QPushButton("Menu")
-        self.btn_menu.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_menu.clicked.connect(self.show_menu)
-        top_layout.addWidget(self.btn_menu)
+        top_layout.addWidget(media_group)
 
-        self.btn_collapse = QPushButton("Open")
-        self.btn_collapse.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_collapse.clicked.connect(self.toggle_content_area)
-        top_layout.addWidget(self.btn_collapse)
+        top_layout.addWidget(self._make_divider())
 
-        self.btn_close = QPushButton("Close")
-        self.btn_close.setCursor(QCursor(Qt.PointingHandCursor))
+        control_group = QWidget()
+        control_layout = QHBoxLayout(control_group)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setSpacing(2)
+
+        self.btn_collapse = self._make_icon_button(
+            "glass_icon_button",
+            "chevron_up",
+            "Expand or collapse the assistant",
+            tooltip="Expand or collapse the assistant",
+        )
+        self.btn_collapse.clicked.connect(self._noop)
+        control_layout.addWidget(self.btn_collapse)
+
+        self.btn_grip = self._make_icon_button(
+            "glass_icon_button",
+            "grip",
+            "Drag live bar",
+            tooltip="Drag live bar",
+        )
+        self.btn_grip.setCursor(QCursor(Qt.OpenHandCursor))
+        self.btn_grip.clicked.connect(self._noop)
+        control_layout.addWidget(self.btn_grip)
+        top_layout.addWidget(control_group)
+
+        self.btn_close = self._make_icon_button(
+            "top_close_button",
+            "close",
+            "Close live bar",
+            tooltip="Close live bar",
+            button_size=QSize(38, 38),
+            icon_size=QSize(16, 16),
+        )
         self.btn_close.clicked.connect(self.close)
-        top_layout.addWidget(self.btn_close)
+        top_row_layout.addWidget(self.btn_close)
+        self._apply_panel_shadow(self.btn_close, blur=14, y_offset=4)
+        top_row_layout.addStretch()
+
+        self.profile_chip = None
+        self.brand_label = None
 
         self.content_container = QFrame()
-        self.content_container.setObjectName("content_container")
-        self.content_container.setVisible(False)
-        self.main_layout.addWidget(self.content_container, 1)
+        self.content_container.setObjectName("glass_sheet")
+        self.content_container.setFixedWidth(700)
+        self.content_container.setVisible(True)
+        self.main_layout.addWidget(self.content_container, 0, Qt.AlignHCenter)
+        self._apply_panel_shadow(self.content_container, blur=40, y_offset=18)
 
         content_layout = QVBoxLayout(self.content_container)
-        content_layout.setContentsMargins(12, 12, 12, 12)
+        content_layout.setContentsMargins(16, 12, 16, 13)
         content_layout.setSpacing(10)
+
+        header_row = QWidget()
+        header_layout = QHBoxLayout(header_row)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(5)
+
+        self.btn_context = self._make_icon_button(
+            "header_home_button",
+            "home",
+            "Toggle session notes",
+            tooltip="Toggle session notes",
+            button_size=QSize(30, 30),
+            icon_size=QSize(15, 15),
+            active_color="#F4F5F8",
+            inactive_color="#E7E9EE",
+        )
+        self.btn_context.clicked.connect(self._noop)
+        header_layout.addWidget(self.btn_context)
+
+        self.btn_tab_ask = QPushButton("Chat")
+        self.btn_tab_ask.setObjectName("surface_tab")
+        self.btn_tab_ask.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_tab_ask.setAccessibleName("Show chat surface")
+        self.btn_tab_ask.clicked.connect(self._noop)
+        header_layout.addWidget(self.btn_tab_ask)
+
+        self.btn_tab_transcript = QPushButton("Transcript")
+        self.btn_tab_transcript.setObjectName("surface_tab")
+        self.btn_tab_transcript.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_tab_transcript.setAccessibleName("Show transcript surface")
+        self.btn_tab_transcript.clicked.connect(self._noop)
+        header_layout.addWidget(self.btn_tab_transcript)
+
+        header_layout.addStretch()
+
+        self.btn_menu = self._make_icon_button(
+            "header_expand_button",
+            "expand",
+            "Open assistant actions",
+            tooltip="Open assistant actions",
+            icon_size=QSize(14, 14),
+        )
+        self.btn_menu.clicked.connect(self._noop)
+        header_layout.addWidget(self.btn_menu)
+        content_layout.addWidget(header_row)
+
+        self.quick_actions_row = QFrame()
+        self.quick_actions_row.setObjectName("quick_actions_row")
+        quick_actions_layout = QHBoxLayout(self.quick_actions_row)
+        quick_actions_layout.setContentsMargins(0, 0, 0, 0)
+        quick_actions_layout.setSpacing(7)
+
+        self.btn_assist = self._make_quick_action_button("Assist", self._noop, "sparkles")
+        quick_actions_layout.addWidget(self.btn_assist)
+        quick_actions_layout.addWidget(self._make_dot_label())
+
+        self.btn_suggest_next = self._make_quick_action_button(
+            "What should I say?",
+            self._noop,
+            "wand",
+        )
+        quick_actions_layout.addWidget(self.btn_suggest_next)
+        quick_actions_layout.addWidget(self._make_dot_label())
+
+        self.btn_suggest_followup = self._make_quick_action_button(
+            "Follow-up questions",
+            self._noop,
+            "message_plus",
+        )
+        quick_actions_layout.addWidget(self.btn_suggest_followup)
+        quick_actions_layout.addWidget(self._make_dot_label())
+
+        self.btn_suggest_recap = self._make_quick_action_button(
+            "Recap",
+            self._noop,
+            "rotate",
+        )
+        quick_actions_layout.addWidget(self.btn_suggest_recap)
+        quick_actions_layout.addStretch()
+        content_layout.addWidget(self.quick_actions_row)
+
+        self.suggestion_buttons = [
+            self.btn_assist,
+            self.btn_suggest_next,
+            self.btn_suggest_followup,
+            self.btn_suggest_recap,
+        ]
+
+        self.content_stack = QStackedWidget()
+        ask_page = QWidget()
+        ask_page.setObjectName("ask_page")
+        ask_layout = QVBoxLayout(ask_page)
+        ask_layout.setContentsMargins(0, 0, 0, 0)
+        ask_layout.setSpacing(0)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("response_scroll")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+        self.scroll_area.viewport().setAutoFillBackground(False)
+        self.scroll_area.viewport().setStyleSheet("background: transparent;")
+        ask_layout.addWidget(self.scroll_area, 1)
+
+        self.response_pool = QWidget()
+        self.response_pool.setObjectName("response_pool")
+        self.response_pool.setStyleSheet("background: transparent;")
+        self.response_layout = QVBoxLayout(self.response_pool)
+        self.response_layout.setContentsMargins(0, 0, 0, 0)
+        self.response_layout.setSpacing(10)
+        self.empty_state = QLabel(
+            "Assist responses will appear here. Start with a suggestion above or ask a direct question."
+        )
+        self.empty_state.setObjectName("empty_state")
+        self.empty_state.setAlignment(Qt.AlignCenter)
+        self.empty_state.setWordWrap(True)
+        self.response_layout.addWidget(self.empty_state)
+        self.response_layout.addStretch()
+        self.scroll_area.setWidget(self.response_pool)
+
+        transcript_page = QWidget()
+        transcript_page.setObjectName("transcript_page")
+        transcript_layout = QVBoxLayout(transcript_page)
+        transcript_layout.setContentsMargins(0, 0, 0, 0)
+        transcript_layout.setSpacing(0)
 
         self.txt_transcription = QTextEdit()
         self.txt_transcription.setObjectName("transcript_box")
         self.txt_transcription.setReadOnly(True)
-        self.txt_transcription.setFixedHeight(100)
-        self.txt_transcription.setPlaceholderText("Transcript will appear here.")
-        content_layout.addWidget(self.txt_transcription)
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here.")
+        transcript_layout.addWidget(self.txt_transcription)
 
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        content_layout.addWidget(self.scroll_area, 1)
+        self.content_stack.addWidget(ask_page)
+        self.content_stack.addWidget(transcript_page)
+        self.content_stack.hide()
 
-        self.response_pool = QWidget()
-        self.response_layout = QVBoxLayout(self.response_pool)
-        self.response_layout.setContentsMargins(2, 2, 2, 2)
-        self.response_layout.setSpacing(10)
-        self.response_layout.addStretch()
-        self.scroll_area.setWidget(self.response_pool)
+        composer_shell = QFrame()
+        composer_shell.setObjectName("composer_shell")
+        content_layout.addWidget(composer_shell)
 
-        chat_row = QHBoxLayout()
-        chat_row.setSpacing(8)
+        composer_layout = QVBoxLayout(composer_shell)
+        composer_layout.setContentsMargins(12, 8, 10, 8)
+        composer_layout.setSpacing(7)
+
+        input_row = QHBoxLayout()
+        input_row.setContentsMargins(4, 0, 4, 0)
+        input_row.setSpacing(6)
+
         self.chat_input = QLineEdit()
-        self.chat_input.setPlaceholderText("Ask Assist a follow-up or paste a prompt here.")
-        self.chat_input.returnPressed.connect(self.send_chat_message)
-        chat_row.addWidget(self.chat_input, 1)
+        self.chat_input.setObjectName("chat_input")
+        self.chat_input.setPlaceholderText("Ask about your screen or conversation, or")
+        input_row.addWidget(self.chat_input, 1)
 
-        self.btn_send = QPushButton("Send")
-        self.btn_send.setObjectName("btn_primary")
+        shortcut_layout = QHBoxLayout()
+        shortcut_layout.setContentsMargins(0, 0, 0, 0)
+        shortcut_layout.setSpacing(3)
+        shortcut_layout.addWidget(self._make_shortcut_chip("Ctrl"))
+        shortcut_layout.addWidget(self._make_shortcut_chip("Enter"))
+
+        shortcut_hint = QLabel("for Assist")
+        shortcut_hint.setObjectName("shortcut_hint")
+        shortcut_layout.addWidget(shortcut_hint)
+        input_row.addLayout(shortcut_layout)
+        composer_layout.addLayout(input_row)
+
+        toolbar_row = QHBoxLayout()
+        toolbar_row.setContentsMargins(0, 0, 0, 0)
+        toolbar_row.setSpacing(6)
+
+        toolbar_left = QHBoxLayout()
+        toolbar_left.setContentsMargins(0, 0, 0, 0)
+        toolbar_left.setSpacing(7)
+
+        self.btn_screen_analysis = QPushButton("Use Screen")
+        self.btn_screen_analysis.setObjectName("toolbar_button_primary")
+        self.btn_screen_analysis.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_screen_analysis.setToolTip("Capture and analyze the current screen")
+        self.btn_screen_analysis.setAccessibleName("Use screen")
+        self.btn_screen_analysis.clicked.connect(self._noop)
+        self._set_text_button_icon(self.btn_screen_analysis, "image", QSize(14, 14), "#8AB4F8")
+        toolbar_left.addWidget(self.btn_screen_analysis)
+
+        self.btn_smart = QPushButton("Smart")
+        self.btn_smart.setObjectName("toolbar_button_warm")
+        self.btn_smart.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_smart.setToolTip("Toggle smart mode")
+        self.btn_smart.setAccessibleName("Toggle smart mode")
+        self.btn_smart.clicked.connect(self._noop)
+        self._set_text_button_icon(self.btn_smart, "zap", QSize(14, 14), "#E7E8EC")
+        toolbar_left.addWidget(self.btn_smart)
+
+        self.btn_context_vault = QPushButton("General")
+        self.btn_context_vault.setObjectName("toolbar_button_dropdown")
+        self.btn_context_vault.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_context_vault.setToolTip("General actions")
+        self.btn_context_vault.setAccessibleName("Open general actions")
+        self.btn_context_vault.clicked.connect(self._noop)
+        self.btn_context_vault.setLayoutDirection(Qt.RightToLeft)
+        self._set_text_button_icon(self.btn_context_vault, "chevron_down", QSize(13, 13), "#A3A7B2")
+        toolbar_left.addWidget(self.btn_context_vault)
+        toolbar_left.addStretch()
+
+        toolbar_row.addLayout(toolbar_left, 1)
+
+        self.btn_send = QPushButton()
+        self.btn_send.setObjectName("send_button")
         self.btn_send.setCursor(QCursor(Qt.PointingHandCursor))
-        self.btn_send.clicked.connect(self.send_chat_message)
-        chat_row.addWidget(self.btn_send)
-        content_layout.addLayout(chat_row)
+        self.btn_send.setToolTip("Send prompt")
+        self.btn_send.setAccessibleName("Send prompt")
+        self.btn_send.clicked.connect(self._noop)
+        self.btn_send.setIcon(render_svg_icon("send", "#FFFFFF", QSize(15, 15)))
+        self.btn_send.setIconSize(QSize(15, 15))
+        toolbar_row.addWidget(self.btn_send)
+        composer_layout.addLayout(toolbar_row)
 
         self.context_container = QFrame()
         self.context_container.setObjectName("context_container")
         self.context_container.setVisible(False)
-        self.context_container.setMinimumHeight(190)
-        self.main_layout.addWidget(self.context_container)
+        self.context_container.setMinimumHeight(220)
+        self.main_layout.addWidget(self.context_container, 0, Qt.AlignHCenter)
 
         context_layout = QVBoxLayout(self.context_container)
-        context_layout.setContentsMargins(12, 12, 12, 12)
-        context_layout.setSpacing(8)
+        context_layout.setContentsMargins(14, 14, 14, 14)
+        context_layout.setSpacing(10)
 
         context_header = QHBoxLayout()
-        context_title = QLabel("Context")
-        context_title.setStyleSheet("font-size: 14px; font-weight: 700;")
+        context_title = QLabel("Session Notes")
+        context_title.setStyleSheet("font-size: 14px; font-weight: 600; color: #F8F8FF;")
         context_header.addWidget(context_title)
 
         self.combo_context_notes = QComboBox()
+        self.combo_context_notes.setMinimumHeight(38)
         self.combo_context_notes.currentIndexChanged.connect(self.on_note_selected)
         context_header.addWidget(self.combo_context_notes, 1)
 
         self.btn_add_context_note = QPushButton("Add")
+        self.btn_add_context_note.setObjectName("notes_action_button")
+        self.btn_add_context_note.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_add_context_note.setToolTip("Create a new session note")
+        self.btn_add_context_note.setAccessibleName("Create a new session note")
         self.btn_add_context_note.clicked.connect(self.add_note)
         context_header.addWidget(self.btn_add_context_note)
 
         self.btn_rename_context_note = QPushButton("Rename")
+        self.btn_rename_context_note.setObjectName("notes_action_button")
+        self.btn_rename_context_note.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_rename_context_note.setToolTip("Rename the selected session note")
+        self.btn_rename_context_note.setAccessibleName("Rename the selected session note")
         self.btn_rename_context_note.clicked.connect(self.rename_note)
         context_header.addWidget(self.btn_rename_context_note)
 
         self.btn_delete_context_note = QPushButton("Delete")
+        self.btn_delete_context_note.setObjectName("notes_action_button")
+        self.btn_delete_context_note.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_delete_context_note.setToolTip("Delete the selected session note")
+        self.btn_delete_context_note.setAccessibleName("Delete the selected session note")
         self.btn_delete_context_note.clicked.connect(self.delete_note)
         context_header.addWidget(self.btn_delete_context_note)
 
         self.btn_close_context = QPushButton("Hide")
-        self.btn_close_context.clicked.connect(self.toggle_notes)
+        self.btn_close_context.setObjectName("notes_action_button")
+        self.btn_close_context.setCursor(QCursor(Qt.PointingHandCursor))
+        self.btn_close_context.setToolTip("Hide session notes")
+        self.btn_close_context.setAccessibleName("Hide session notes")
+        self.btn_close_context.clicked.connect(self._noop)
         context_header.addWidget(self.btn_close_context)
         context_layout.addLayout(context_header)
 
         self.txt_context = QTextEdit()
-        self.txt_context.setPlaceholderText("Capture notes, proof points, and follow-ups here.")
-        self.txt_context.textChanged.connect(self.auto_save_note)
+        self.txt_context.setObjectName("notes_editor")
+        self.txt_context.setPlaceholderText("Capture proof points, risks, and follow-ups here.")
         context_layout.addWidget(self.txt_context, 1)
 
-        self.resize_handle = QWidget()
-        self.resize_handle.setObjectName("resize_handle")
-        self.resize_handle.setFixedHeight(8)
-        self.resize_handle.setCursor(QCursor(Qt.SizeVerCursor))
-        self.main_layout.addWidget(self.resize_handle)
+        self.btn_load_context = None
+        self.btn_clear = None
+        self.transcript_kicker = None
+        self.sheet_kicker = QLabel("")
+        self.sheet_kicker.hide()
+
+        self.btn_mic = self.btn_pause
+        self.is_expanded = True
+        self._set_icon_button_state(self.btn_eye_mode, True)
+        self._set_icon_button_state(self.btn_privacy_mode, False)
+        self._set_icon_button_state(self.btn_pause, False)
+        self._set_icon_button_state(self.btn_stop_transport, False)
+        self._set_icon_button_state(self.btn_collapse, False)
+        self._set_icon_button_state(self.btn_grip, False)
+        self._set_icon_button_state(self.btn_context, False)
+        self._set_tab_active(self.btn_tab_ask, True)
+        self._set_tab_active(self.btn_tab_transcript, False)
+        self._set_button_active(self.btn_smart, False)
+        self._apply_ui_typography()
+        self._switch_surface("ask")
+
+    def _apply_wordmark_font(self) -> None:
+        if self.brand_label is None:
+            return
+        brand_family = QApplication.instance().property("opencluely_wordmark_family") or "Inter"
+        wordmark_font = QFont(str(brand_family), 15)
+        wordmark_font.setWeight(QFont.DemiBold)
+        wordmark_font.setLetterSpacing(QFont.AbsoluteSpacing, -0.7)
+        self.brand_label.setFont(wordmark_font)
+
+    @staticmethod
+    def _apply_panel_shadow(widget: QWidget, *, blur: int, y_offset: int) -> None:
+        shadow = QGraphicsDropShadowEffect(widget)
+        shadow.setBlurRadius(blur)
+        shadow.setColor(QColor(0, 0, 0, 76))
+        shadow.setOffset(0, y_offset)
+        widget.setGraphicsEffect(shadow)
+
+    @staticmethod
+    def _make_ui_font(point_size: int, *, weight: int, tracking: float) -> QFont:
+        family = QApplication.instance().property("opencluely_ui_family") or "Inter"
+        font = QFont(str(family), point_size)
+        font.setWeight(weight)
+        font.setLetterSpacing(QFont.AbsoluteSpacing, tracking)
+        return font
+
+    def _apply_ui_typography(self) -> None:
+        label_font = self._make_ui_font(10, weight=QFont.DemiBold, tracking=-0.7)
+        micro_font = self._make_ui_font(8, weight=QFont.DemiBold, tracking=-0.45)
+        input_font = self._make_ui_font(10, weight=QFont.Medium, tracking=-0.35)
+
+        for button in (
+            self.btn_tab_ask,
+            self.btn_tab_transcript,
+            self.btn_assist,
+            self.btn_suggest_next,
+            self.btn_suggest_followup,
+            self.btn_suggest_recap,
+            self.btn_screen_analysis,
+            self.btn_smart,
+            self.btn_context_vault,
+        ):
+            button.setFont(label_font)
+
+        self.chat_input.setFont(input_font)
+        self.record_indicator.setFont(micro_font)
+        self.timer_label.setFont(micro_font)
+
+    @staticmethod
+    def _noop() -> None:
+        return None
+
+    @staticmethod
+    def _make_segment(object_name: str = "top_segment") -> QFrame:
+        segment = QFrame()
+        segment.setObjectName(object_name)
+        return segment
+
+    @staticmethod
+    def _make_divider() -> QFrame:
+        divider = QFrame()
+        divider.setObjectName("line_divider")
+        return divider
+
+    def _make_icon_button(
+        self,
+        object_name: str,
+        icon_key: str,
+        accessible_name: str,
+        *,
+        tooltip: str,
+        button_size: QSize | None = None,
+        icon_size: QSize | None = None,
+        active_color: str = "#FFFFFF",
+        inactive_color: str = "#9CA3AF",
+    ) -> QPushButton:
+        button = QPushButton()
+        button.setObjectName(object_name)
+        button.setCursor(QCursor(Qt.PointingHandCursor))
+        button.setToolTip(tooltip)
+        button.setAccessibleName(accessible_name)
+        target_size = button_size or QSize(26, 26)
+        target_icon_size = icon_size or QSize(16, 16)
+        button.setFixedSize(target_size)
+        button.setIconSize(target_icon_size)
+        button._icon_key = icon_key
+        button._active_color = active_color
+        button._inactive_color = inactive_color
+        self._set_icon_button_state(button, False)
+        return button
+
+    @staticmethod
+    def _set_text_button_icon(button: QPushButton, icon_key: str, size: QSize, color: str) -> None:
+        button.setIcon(render_svg_icon(icon_key, color, size))
+        button.setIconSize(size)
+
+    def _make_quick_action_button(self, label: str, callback, icon_key: str | None = None) -> QPushButton:
+        button = QPushButton(label)
+        button.setObjectName("quick_action_button")
+        button.setCursor(QCursor(Qt.PointingHandCursor))
+        button.setToolTip(label)
+        button.setAccessibleName(label)
+        if icon_key is not None:
+            self._set_text_button_icon(button, icon_key, QSize(13, 13), "#D8D8DC")
+        button.clicked.connect(callback)
+        return button
+
+    @staticmethod
+    def _make_shortcut_chip(label: str) -> QLabel:
+        chip = QLabel(label)
+        chip.setObjectName("shortcut_chip")
+        chip.setAlignment(Qt.AlignCenter)
+        return chip
+
+    @staticmethod
+    def _make_dot_label() -> QLabel:
+        dot = QLabel("\u2022")
+        dot.setObjectName("quick_action_dot")
+        dot.setAccessibleName("Quick action separator")
+        return dot
+
+    @staticmethod
+    def _set_tab_active(button: QPushButton, is_active: bool) -> None:
+        button.setProperty("active", "true" if is_active else "false")
+        button.style().unpolish(button)
+        button.style().polish(button)
+
+    def _set_icon_button_state(self, button: QPushButton, is_active: bool) -> None:
+        button.setProperty("active", "true" if is_active else "false")
+        color = button._active_color if is_active else button._inactive_color
+        button.setIcon(render_svg_icon(button._icon_key, color, button.iconSize()))
+        button.style().unpolish(button)
+        button.style().polish(button)
+
+    def set_vision_mode(self, mode: str) -> None:
+        self.vision_mode = mode
+        self._set_icon_button_state(self.btn_eye_mode, mode == "visible")
+        self._set_icon_button_state(self.btn_privacy_mode, mode == "anonymous")
+        self._update_general_button_text()
+
+    def toggle_smart_mode(self) -> None:
+        self.smart_mode = not getattr(self, "smart_mode", False)
+        self._sync_smart_button()
+
+    def _sync_smart_button(self) -> None:
+        self._set_button_active(self.btn_smart, getattr(self, "smart_mode", False))
+
+    def _sync_recording_transport(self) -> None:
+        self._set_icon_button_state(self.btn_pause, self.is_recording)
+        self._set_icon_button_state(self.btn_stop_transport, False)
+        self._set_icon_button_state(self.btn_collapse, False)
+        self.btn_grip.setCursor(QCursor(Qt.OpenHandCursor))
+
+    def _update_general_button_text(self) -> None:
+        privacy_label = "Private" if getattr(self, "vision_mode", "visible") == "anonymous" else "General"
+        self.btn_context_vault.setText(privacy_label)
+        self._set_text_button_icon(self.btn_context_vault, "chevron_down", QSize(13, 13), "#A3A7B2")
+
+    def _switch_surface(self, surface: str) -> None:
+        self.active_surface = surface
+        if self.content_stack is not None:
+            self.content_stack.setCurrentIndex(0 if surface == "ask" else 1)
+        self._set_tab_active(self.btn_tab_ask, surface == "ask")
+        self._set_tab_active(self.btn_tab_transcript, surface == "transcript")
+        self.quick_actions_row.setVisible(surface == "ask")
+
+    def _request_assist_prompt(self, prompt: str) -> None:
+        self._switch_surface("ask")
+        self.chat_input.setText(prompt)
+        self.send_chat_message()
 
     def setup_backend(self) -> None:
         api_key = os.environ.get("GROQ_API_KEY", "").strip()
@@ -556,50 +893,53 @@ class LiveBar(QMainWindow):
 
     def set_session_data(self, session_context: dict | None) -> None:
         self.session_context = session_context or {}
-        profile_name = self.session_context.get("profile_name") or "General Copilot"
-        self.status_label.setText(f"Profile: {profile_name}")
+        profile_name = (
+            self.session_context.get("brief_name")
+            or self.session_context.get("profile_name")
+            or "Blank Brief"
+        )
+        self.current_profile_name = self._trim_text(profile_name, 48)
+        self.setWindowTitle(f"Opencluely - {self.current_profile_name}")
+        self.top_bar.setToolTip(f"Opencluely controls for {self.current_profile_name}")
+        self.content_container.setToolTip(f"Active brief: {self.current_profile_name}")
+        self.btn_context_vault.setToolTip(f"General actions for {self.current_profile_name}")
+        self.chat_input.setAccessibleName(f"Ask Opencluely about {self.current_profile_name}")
+        self._update_general_button_text()
+
+    def _install_drag_handles(self) -> None:
+        for label in (self.brand_label, self.record_indicator, self.timer_label):
+            if label is not None:
+                label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+
+        self.top_bar.installEventFilter(self)
+        self.btn_grip.installEventFilter(self)
+
+    def _begin_drag(self, global_pos: QPoint) -> None:
+        self.is_dragging = True
+        self.drag_position = global_pos - self.frameGeometry().topLeft()
+        self._sync_recording_transport()
+
+    def _end_drag(self) -> None:
+        self.is_dragging = False
+        self.setCursor(QCursor(Qt.ArrowCursor))
+        self._sync_recording_transport()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        resize_zone = 14
         if event.button() != Qt.LeftButton:
             super().mousePressEvent(event)
             return
 
-        if event.y() >= self.height() - resize_zone:
-            self.is_resizing = True
-            self.is_dragging = False
-            self.drag_position = event.globalPos()
-            self.resize_start_height = self.height()
-            self.setCursor(QCursor(Qt.SizeVerCursor))
-            event.accept()
-            return
+        if self.top_bar.geometry().contains(event.pos()):
+            target = self.childAt(event.pos())
+            interactive_types = (QPushButton, QLineEdit, QTextEdit, QComboBox)
+            if target is None or not isinstance(target, interactive_types):
+                self._begin_drag(event.globalPos())
+                event.accept()
+                return
 
-        self.is_dragging = True
-        self.is_resizing = False
-        self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-        event.accept()
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        resize_zone = 14
-
-        if not self.is_dragging and not self.is_resizing:
-            if event.y() >= self.height() - resize_zone:
-                self.setCursor(QCursor(Qt.SizeVerCursor))
-            else:
-                self.setCursor(QCursor(Qt.ArrowCursor))
-
-        if self.is_resizing:
-            delta_y = event.globalPos().y() - self.drag_position.y()
-            new_height = self.resize_start_height + delta_y
-            new_height = max(self.min_height, min(self.max_height, new_height))
-            self.resize(self.width(), new_height)
-
-            if new_height > 160 and not self.is_expanded:
-                self.set_content_visibility(True)
-
-            event.accept()
-            return
-
         if self.is_dragging:
             self.move(event.globalPos() - self.drag_position)
             event.accept()
@@ -608,10 +948,35 @@ class LiveBar(QMainWindow):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        self.is_dragging = False
-        self.is_resizing = False
-        self.setCursor(QCursor(Qt.ArrowCursor))
+        self._end_drag()
         super().mouseReleaseEvent(event)
+
+    def eventFilter(self, watched, event):
+        if watched in (self.top_bar, self.btn_grip):
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                self._begin_drag(event.globalPos())
+                event.accept()
+                return True
+
+            if event.type() == QEvent.MouseMove and self.is_dragging:
+                self.move(event.globalPos() - self.drag_position)
+                event.accept()
+                return True
+
+            if event.type() == QEvent.MouseButtonRelease and self.is_dragging:
+                self._end_drag()
+                event.accept()
+                return True
+
+        return super().eventFilter(watched, event)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() == Qt.Key_Escape:
+            self.handle_escape()
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
 
     def closeEvent(self, event) -> None:
         self.stop_recording()
@@ -644,13 +1009,62 @@ class LiveBar(QMainWindow):
 
     def show_menu(self) -> None:
         menu = QMenu(self)
-        menu.addAction("Load Context File", self.load_context)
-        menu.addAction("Toggle Context", self.toggle_notes)
-        menu.addAction("Toggle Context Vault", self.toggle_context_vault_panel)
-        menu.addAction("Toggle Chat Area", self.toggle_content_area)
+        show_ask = menu.addAction("Show Chat")
+        show_ask.setCheckable(True)
+        show_ask.setChecked(self.active_surface == "ask")
+        show_ask.triggered.connect(lambda: [self.ensure_content_visible(), self._switch_surface("ask")])
+
+        show_transcript = menu.addAction("Show Transcript")
+        show_transcript.setCheckable(True)
+        show_transcript.setChecked(self.active_surface == "transcript")
+        show_transcript.triggered.connect(
+            lambda: [self.ensure_content_visible(), self._switch_surface("transcript")]
+        )
+
         menu.addSeparator()
+
+        smart_action = menu.addAction("Smart Mode")
+        smart_action.setCheckable(True)
+        smart_action.setChecked(self.smart_mode)
+        smart_action.triggered.connect(self.toggle_smart_mode)
+
+        visible_action = menu.addAction("Visible Mode")
+        visible_action.setCheckable(True)
+        visible_action.setChecked(self.vision_mode == "visible")
+        visible_action.triggered.connect(lambda: self.set_vision_mode("visible"))
+
+        privacy_action = menu.addAction("Anonymous Mode")
+        privacy_action.setCheckable(True)
+        privacy_action.setChecked(self.vision_mode == "anonymous")
+        privacy_action.triggered.connect(lambda: self.set_vision_mode("anonymous"))
+
+        menu.addSeparator()
+
+        notes_action = menu.addAction("Session Notes")
+        notes_action.setCheckable(True)
+        notes_action.setChecked(self.context_container.isVisible())
+        notes_action.triggered.connect(self.toggle_notes)
+
+        prep_action = menu.addAction("Prep Deck")
+        prep_action.setCheckable(True)
+        prep_action.setChecked(
+            self.context_vault_panel is not None and self.context_vault_panel.isVisible()
+        )
+        prep_action.triggered.connect(self.toggle_context_vault_panel)
+
+        menu.addAction("Load Context File", self.load_context)
+        menu.addAction("Clear Transcript", self.clear_all)
+        menu.addAction("Hide Sheet", lambda: self.set_content_visibility(False))
+        menu.addSeparator()
+        menu.addAction("Hide Live Bar", self.toggle_visibility)
         menu.addAction("Quit", self.close)
-        menu.exec_(QCursor.pos())
+
+        sender = self.sender()
+        if isinstance(sender, QPushButton):
+            anchor = sender.mapToGlobal(sender.rect().bottomLeft())
+        else:
+            anchor = QCursor.pos()
+        menu.exec_(anchor)
 
     def toggle_recording(self) -> None:
         if self.is_recording:
@@ -675,15 +1089,16 @@ class LiveBar(QMainWindow):
         self.audio.start()
 
         self.is_recording = True
-        self.btn_mic.setText("Stop")
-        self.btn_mic.setObjectName("btn_recording")
-        self.btn_mic.style().unpolish(self.btn_mic)
-        self.btn_mic.style().polish(self.btn_mic)
         self.record_indicator.setVisible(True)
         self.timer_label.setVisible(True)
         self.txt_transcription.setPlaceholderText("Listening...")
+        self._sync_recording_transport()
         self.start_timer()
-        self.ensure_content_visible()
+
+        if not hasattr(self, "pulse_timer"):
+            self.pulse_timer = QTimer(self)
+            self.pulse_timer.timeout.connect(self._toggle_pulse)
+        self.pulse_timer.start(800)
 
     def stop_recording(self) -> None:
         if self.audio is not None:
@@ -694,19 +1109,29 @@ class LiveBar(QMainWindow):
                 logger.debug("Audio thread stop failed", exc_info=True)
         self.on_recording_stopped()
 
+    def handle_transport_stop(self) -> None:
+        if self.is_recording or self.audio is not None:
+            self.stop_recording()
+            return
+
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here.")
+
     def on_recording_stopped(self) -> None:
         self.is_recording = False
         self.audio = None
-        self.btn_mic.setText("Mic")
-        self.btn_mic.setObjectName("")
-        self.btn_mic.style().unpolish(self.btn_mic)
-        self.btn_mic.style().polish(self.btn_mic)
         self.record_indicator.setVisible(False)
         self.timer_label.setVisible(False)
-        self.txt_transcription.setPlaceholderText("Transcript will appear here.")
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here.")
+        self._sync_recording_transport()
 
         if self.timer_rec is not None:
             self.timer_rec.stop()
+            
+        if hasattr(self, "pulse_timer"):
+            self.pulse_timer.stop()
+            self.record_indicator.setProperty("pulse", "false")
+            self.record_indicator.style().unpolish(self.record_indicator)
+            self.record_indicator.style().polish(self.record_indicator)
 
     def start_timer(self) -> None:
         self.seconds = 0
@@ -728,6 +1153,12 @@ class LiveBar(QMainWindow):
         minutes, seconds = divmod(self.seconds, 60)
         self.timer_label.setText(f"{minutes:02}:{seconds:02}")
 
+    def _toggle_pulse(self) -> None:
+        is_pulse_active = self.record_indicator.property("pulse") == "true"
+        self.record_indicator.setProperty("pulse", "false" if is_pulse_active else "true")
+        self.record_indicator.style().unpolish(self.record_indicator)
+        self.record_indicator.style().polish(self.record_indicator)
+
     def on_audio_data(self, chunk: bytes) -> None:
         if self.transcriber is None:
             return
@@ -740,7 +1171,6 @@ class LiveBar(QMainWindow):
 
         self.txt_transcription.append(clean_text)
         self.last_question = clean_text
-        self.ensure_content_visible()
 
     def add_log(self, text: str) -> None:
         clean_text = (text or "").strip()
@@ -762,13 +1192,15 @@ class LiveBar(QMainWindow):
         self.last_question = question
         reference_context = self.build_reference_context(include_transcript=False)
         self.ensure_content_visible()
+        self._switch_surface("ask")
         self.assist_service.generate_answer(question, reference_context, self.session_context)
 
     def on_assist_started(self) -> None:
         self.btn_assist.setEnabled(False)
         self.btn_assist.setText("Working...")
         self.btn_send.setEnabled(False)
-        self.chat_input.setPlaceholderText("Assist is generating a response...")
+        self._set_suggestion_buttons_enabled(False)
+        self.chat_input.setPlaceholderText("Assist is generating a grounded response...")
 
     def on_assist_response(self, answer: str) -> None:
         self.reset_assist_controls()
@@ -782,7 +1214,14 @@ class LiveBar(QMainWindow):
         self.btn_assist.setEnabled(True)
         self.btn_assist.setText("Assist")
         self.btn_send.setEnabled(True)
-        self.chat_input.setPlaceholderText("Ask Assist a follow-up or paste a prompt here.")
+        self._set_suggestion_buttons_enabled(True)
+        self.chat_input.setPlaceholderText("Ask about your conversation, next move, or screen.")
+
+    def _set_suggestion_buttons_enabled(self, enabled: bool) -> None:
+        for button in self.suggestion_buttons:
+            if button is self.btn_assist:
+                continue
+            button.setEnabled(enabled)
 
     def on_screen_analysis(self) -> None:
         if self.screen_analysis is None:
@@ -797,35 +1236,38 @@ class LiveBar(QMainWindow):
         self.raise_()
         self.activateWindow()
         self.btn_screen_analysis.setEnabled(False)
-        self.btn_screen_analysis.setText("Working...")
+        self.btn_screen_analysis.setText("Scanning...")
         self.ensure_content_visible()
+        self._switch_surface("ask")
         self.screen_analysis.capture_and_analyze()
 
     def on_screen_analysis_started(self) -> None:
-        self.txt_transcription.setPlaceholderText("Running Screen Analysis...")
+        self.txt_transcription.setPlaceholderText("Running screen capture...")
 
     def on_screen_result(self, text: str) -> None:
         self.btn_screen_analysis.setEnabled(True)
-        self.btn_screen_analysis.setText("Screen Analysis")
-        self.txt_transcription.setPlaceholderText("Transcript will appear here.")
+        self.btn_screen_analysis.setText("Use Screen")
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here.")
         self.add_response("Screen Analysis", text)
 
     def on_screen_error(self, message: str) -> None:
         self.btn_screen_analysis.setEnabled(True)
-        self.btn_screen_analysis.setText("Screen Analysis")
-        self.txt_transcription.setPlaceholderText("Transcript will appear here.")
+        self.btn_screen_analysis.setText("Use Screen")
+        self.txt_transcription.setPlaceholderText("Live transcript will appear here.")
         self.add_response("Screen Analysis", message)
 
     def clear_all(self) -> None:
         self.txt_transcription.clear()
         self.last_question = ""
-        self.txt_transcription.setPlaceholderText("Transcript cleared.")
+        self.txt_transcription.setPlaceholderText("Transcript cleared. Live transcript will appear here.")
 
-        while self.response_layout.count() > 1:
-            item = self.response_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
+        for index in reversed(range(self.response_layout.count())):
+            widget = self.response_layout.itemAt(index).widget()
+            if isinstance(widget, ResponseCard):
+                self.response_layout.takeAt(index)
                 widget.deleteLater()
+
+        self._refresh_response_empty_state()
 
         if self.context is not None and self.context.has_context():
             self.context.clear_context()
@@ -835,7 +1277,10 @@ class LiveBar(QMainWindow):
         card = ResponseCard(label, answer or "")
         card.copy_requested.connect(self.copy_to_clipboard)
         card.delete_requested.connect(self.remove_card)
+        self.empty_state.hide()
 
+        self.ensure_content_visible()
+        self._switch_surface("ask")
         insert_index = self.response_layout.count() - 1
         self.response_layout.insertWidget(insert_index, card)
         QTimer.singleShot(
@@ -850,6 +1295,7 @@ class LiveBar(QMainWindow):
 
     def remove_card(self, card: ResponseCard) -> None:
         card.deleteLater()
+        QTimer.singleShot(0, self._refresh_response_empty_state)
 
     def send_chat_message(self) -> None:
         message = self.chat_input.text().strip()
@@ -865,6 +1311,7 @@ class LiveBar(QMainWindow):
 
         reference_context = self.build_reference_context(include_transcript=True)
         self.ensure_content_visible()
+        self._switch_surface("ask")
         self.assist_service.generate_answer(message, reference_context, self.session_context)
 
     def init_context_notes(self) -> None:
@@ -970,7 +1417,7 @@ class LiveBar(QMainWindow):
         self._set_context_button_active(next_visible)
 
         if next_visible:
-            self.ensure_content_visible(min_height=620)
+            self.resize(self.width(), max(self.height(), 520))
         elif not self.is_expanded:
             self.resize(self.width(), self.min_height)
 
@@ -1001,14 +1448,10 @@ class LiveBar(QMainWindow):
         self.context_vault_panel.show()
         self.context_vault_panel.raise_()
         self.context_vault_panel.activateWindow()
-        self.btn_context_vault.setObjectName("btn_active")
-        self.btn_context_vault.style().unpolish(self.btn_context_vault)
-        self.btn_context_vault.style().polish(self.btn_context_vault)
+        self._set_button_active(self.btn_context_vault, True)
 
     def on_context_vault_closed(self) -> None:
-        self.btn_context_vault.setObjectName("")
-        self.btn_context_vault.style().unpolish(self.btn_context_vault)
-        self.btn_context_vault.style().polish(self.btn_context_vault)
+        self._set_button_active(self.btn_context_vault, False)
 
     def toggle_content_area(self) -> None:
         self.set_content_visibility(not self.is_expanded)
@@ -1016,21 +1459,37 @@ class LiveBar(QMainWindow):
     def set_content_visibility(self, visible: bool) -> None:
         self.is_expanded = visible
         self.content_container.setVisible(visible)
-        self.btn_collapse.setText("Hide" if visible else "Open")
+        self.btn_collapse.setAccessibleName("Collapse live sheet" if visible else "Expand live sheet")
+        self._sync_recording_transport()
 
         if visible:
-            if self.height() < 460:
-                self.resize(self.width(), 460)
+            if self.height() < 500:
+                self.resize(self.width(), 500)
             return
 
         if not self.context_container.isVisible():
             self.resize(self.width(), self.min_height)
+        else:
+            self.resize(self.width(), 318)
 
     def ensure_content_visible(self, min_height: int = 460) -> None:
         if not self.is_expanded:
             self.set_content_visibility(True)
         if self.height() < min_height:
             self.resize(self.width(), min_height)
+
+    def handle_escape(self) -> None:
+        if self.context_vault_panel is not None and self.context_vault_panel.isVisible():
+            self.context_vault_panel.hide()
+            self.on_context_vault_closed()
+            return
+
+        if self.context_container.isVisible():
+            self.toggle_notes()
+            return
+
+        if self.is_expanded:
+            self.set_content_visibility(False)
 
     def load_context(self) -> None:
         if self.context is None:
@@ -1052,6 +1511,9 @@ class LiveBar(QMainWindow):
     def build_reference_context(self, include_transcript: bool = True) -> str:
         parts = []
 
+        if self.current_profile_name:
+            parts.append(f"ACTIVE PROFILE\n{self.current_profile_name}")
+
         session_brief = self.session_context.get("user_context", "").strip()
         if session_brief:
             parts.append(f"SESSION BRIEF\n{self._trim_text(session_brief, 2500)}")
@@ -1068,6 +1530,20 @@ class LiveBar(QMainWindow):
             if transcript:
                 parts.append(f"TRANSCRIPT\n{self._trim_text(transcript, 3500)}")
 
+        if self.smart_mode:
+            parts.append(
+                "WORKING MODE\n"
+                "Smart mode is enabled. Be more proactive, concise, and prescriptive. "
+                "Prefer specific next steps, cleaner wording, and grounded recommendations."
+            )
+
+        if self.vision_mode == "anonymous":
+            parts.append(
+                "PRIVACY MODE\n"
+                "The user enabled anonymous mode. Avoid identifying people or exposing sensitive details "
+                "unless the user explicitly asks for that level of specificity."
+            )
+
         return "\n\n".join(parts)
 
     @staticmethod
@@ -1078,9 +1554,20 @@ class LiveBar(QMainWindow):
         return f"{clean_text[:limit].rstrip()}\n\n[truncated]"
 
     def _set_context_button_active(self, is_active: bool) -> None:
-        self.btn_context.setObjectName("btn_active" if is_active else "")
-        self.btn_context.style().unpolish(self.btn_context)
-        self.btn_context.style().polish(self.btn_context)
+        self._set_button_active(self.btn_context, is_active)
+
+    def _refresh_response_empty_state(self) -> None:
+        has_cards = any(
+            isinstance(self.response_layout.itemAt(index).widget(), ResponseCard)
+            for index in range(self.response_layout.count())
+        )
+        self.empty_state.setVisible(not has_cards)
+
+    @staticmethod
+    def _set_button_active(button: QPushButton, is_active: bool) -> None:
+        button.setProperty("active", "true" if is_active else "false")
+        button.style().unpolish(button)
+        button.style().polish(button)
 
 
 if __name__ == "__main__":
