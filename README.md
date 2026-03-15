@@ -1,8 +1,23 @@
 # Opencluely
 
-Opencluely is currently a focused desktop shell prototype built around a floating AI bar.
-The repository has been reduced to the active runtime, the new PySide6 UI, and the
-documentation that still matters for future iterations.
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![UI](https://img.shields.io/badge/UI-PySide6-41CD52?logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
+[![Gemini](https://img.shields.io/badge/AI-Gemini-4285F4)](https://ai.google.dev/)
+[![Groq](https://img.shields.io/badge/AI-Groq-F55036)](https://groq.com/)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+[![License](https://img.shields.io/github/license/DaviBonetto/opencluely)](LICENSE)
+
+Opencluely is a Windows-first desktop meeting assistant with a floating AI bar.
+It combines live transcription, meeting-aware chat, notes, and optional screen context
+in a compact PySide6 shell designed for real use instead of a static mockup.
+
+## Highlights
+
+- Floating desktop bar wired to a live session backend
+- Real-time transcription with Gemini Live, Groq Whisper, and local fallback adapters
+- Meeting-aware chat that can still answer general questions
+- Incremental notes, screen-aware context, and optional persisted session state
+- Runtime files stored outside the repository for a cleaner workspace
 
 ## Current Runtime
 
@@ -12,6 +27,19 @@ documentation that still matters for future iterations.
 - `src/ui/live_bar.py` keeps the existing import path stable for the app flow
 - `src/runtime/paths.py` centralizes runtime directories for logs and app data outside the repo
 - `assets/fonts/` stores the bundled Inter font used by the shell
+
+## Architecture At A Glance
+
+```text
+Audio Capture -> STT Provider -> Transcript Store -> Session Orchestrator
+                                                   |- Notes Engine
+                                                   |- Screen Capture + Vision
+                                                   `- Chat Provider -> Floating Bar UI
+```
+
+The desktop shell in `src/ui/` talks to a session backend in `src/backend/session/`.
+That backend coordinates provider selection, transcript updates, notes, screen summaries,
+and assistant responses without pushing provider-specific logic into the UI.
 
 ## Repository Layout
 
