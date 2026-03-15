@@ -2,6 +2,7 @@
 
 # Optional backend stack for audio capture, local transcription, and Groq services.
 groq>=0.18.0
+google-genai>=1.29.0
 numpy>=1.26.0
 Pillow>=10.4.0
 scipy>=1.13.0

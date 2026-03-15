@@ -31,6 +31,8 @@ def _resolve_app_home() -> Path:
 APP_HOME = _resolve_app_home()
 LOGS_DIR = APP_HOME / "logs"
 DATA_DIR = APP_HOME / "data"
+SESSIONS_DIR = DATA_DIR / "sessions"
+SCREENS_DIR = DATA_DIR / "screens"
 
 
 def _ensure_dir(path: Path) -> Path:
@@ -48,6 +50,14 @@ def get_logs_dir() -> Path:
 
 def get_data_dir() -> Path:
     return _ensure_dir(DATA_DIR)
+
+
+def get_sessions_dir() -> Path:
+    return _ensure_dir(SESSIONS_DIR)
+
+
+def get_screens_dir() -> Path:
+    return _ensure_dir(SCREENS_DIR)
 
 
 def get_runtime_file(filename: str) -> Path:
