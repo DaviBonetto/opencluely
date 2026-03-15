@@ -7,8 +7,8 @@ documentation that still matters for future iterations.
 ## Current Runtime
 
 - `main.py` boots the desktop app
-- `src/backend/` preserves the audio capture and Groq backend in an organized package tree
-- `src/ui/floating_bar.py` contains the new source-of-truth UI
+- `src/backend/` now contains the real session backend: capture, provider adapters, transcript store, notes, screen context, and persistence
+- `src/ui/floating_bar.py` is the source-of-truth floating bar and is now wired to Chat, Transcript, Notes, providers, and top actions
 - `src/ui/live_bar.py` keeps the existing import path stable for the app flow
 - `src/runtime/paths.py` centralizes runtime directories for logs and app data outside the repo
 - `assets/fonts/` stores the bundled Inter font used by the shell
@@ -28,8 +28,11 @@ scripts/
   clean_local.ps1            Local cleanup helper for repo caches and stale runtime leftovers
 src/
   backend/
-    audio_capture/           Audio capture plus local/Groq transcription adapters
-    groq/                    Groq-backed assist and screen analysis services
+    audio_capture/           Windows-first capture plus chunk/frame emission
+    contracts/               Typed session/provider contracts
+    providers/               Groq, Gemini, and local adapters
+    services/                Transcript store, notes, and screen capture
+    session/                 Session orchestrator, prompt composition, persistence
     settings.py              Shared backend environment settings
   runtime/
     paths.py                 Shared runtime paths for logs and local data
@@ -57,6 +60,15 @@ To work on the restored backend modules:
 
 ```powershell
 pip install -r requirements-backend.txt
+```
+
+Useful provider env vars:
+
+```powershell
+$env:GROQ_API_KEY = "..."
+$env:GEMINI_API_KEY = "..."
+$env:OPENCLUELY_STT_PROVIDER = "auto"
+$env:OPENCLUELY_AUDIO_SOURCE = "auto"
 ```
 
 Optional:
