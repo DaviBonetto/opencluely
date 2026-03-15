@@ -1,17 +1,17 @@
-"""Opencluely screen analysis service."""
+"""Opencluely screen analysis service powered by Groq vision."""
 
 from __future__ import annotations
 
 import base64
 import io
 import logging
-import os
-import time
 
-from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+
+from ..settings import GROQ_API_KEY, GROQ_REQUEST_TIMEOUT, GROQ_VISION_MODEL
 
 
-logger = logging.getLogger("screen_analysis")
+logger = logging.getLogger("backend.groq.screen_analysis")
 
 try:
     from PIL import Image, ImageGrab
@@ -20,6 +20,8 @@ try:
     logger.info("Pillow imported successfully for Screen Analysis")
 except ImportError:
     PIL_AVAILABLE = False
+    Image = None
+    ImageGrab = None
     logger.warning("Pillow is unavailable for Screen Analysis")
 
 try:
@@ -31,9 +33,6 @@ except ImportError:
     GROQ_AVAILABLE = False
     logger.warning("Groq SDK is unavailable for Screen Analysis")
 
-
-VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-VISION_TIMEOUT = 30
 
 VISION_PROMPT = """You are Opencluely Assist.
 Analyze this screenshot carefully.
@@ -60,17 +59,17 @@ class ScreenAnalysisTask(QRunnable):
     """Captures the screen and sends it to the multimodal model."""
 
     class Signals(QObject):
-        started = pyqtSignal()
-        completed = pyqtSignal(str)
-        error = pyqtSignal(str)
-        method_used = pyqtSignal(str)
+        started = Signal()
+        completed = Signal(str)
+        error = Signal(str)
+        method_used = Signal(str)
 
     def __init__(self, groq_client):
         super().__init__()
         self.client = groq_client
         self.signals = self.Signals()
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         try:
             self.signals.started.emit()
@@ -79,18 +78,12 @@ class ScreenAnalysisTask(QRunnable):
             screenshot = ImageGrab.grab()
             logger.info("[ScreenAnalysisTask] Screenshot captured: %s", screenshot.size)
 
-            start_time = time.time()
-            try:
-                text = self._analyze_with_groq(screenshot)
-                elapsed = time.time() - start_time
-                logger.info("[ScreenAnalysisTask] Success in %.2fs", elapsed)
-                self.signals.method_used.emit("Opencluely Screen Analysis")
-                self.signals.completed.emit(text)
-            except Exception as exc:
-                logger.error("[ScreenAnalysisTask] Vision request failed: %s", exc)
-                self.signals.error.emit(f"Screen analysis failed: {exc}")
+            text = self._analyze_with_groq(screenshot)
+            logger.info("[ScreenAnalysisTask] Analysis complete")
+            self.signals.method_used.emit("Opencluely Screen Analysis")
+            self.signals.completed.emit(text)
         except Exception as exc:
-            error_msg = f"Screen capture failed: {exc}"
+            error_msg = f"Screen analysis failed: {exc}"
             logger.error("[ScreenAnalysisTask] %s", error_msg)
             self.signals.error.emit(error_msg)
 
@@ -109,7 +102,7 @@ class ScreenAnalysisTask(QRunnable):
         image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         response = self.client.chat.completions.create(
-            model=VISION_MODEL,
+            model=GROQ_VISION_MODEL,
             messages=[
                 {
                     "role": "user",
@@ -124,7 +117,7 @@ class ScreenAnalysisTask(QRunnable):
             ],
             max_tokens=4000,
             temperature=0.1,
-            timeout=VISION_TIMEOUT,
+            timeout=GROQ_REQUEST_TIMEOUT,
         )
 
         text = response.choices[0].message.content.strip()
@@ -135,30 +128,34 @@ class ScreenAnalysisTask(QRunnable):
 class ScreenAnalysis(QObject):
     """Coordinates screenshot analysis with the Groq multimodal model."""
 
-    analysis_started = pyqtSignal()
-    analysis_completed = pyqtSignal(str)
-    analysis_method = pyqtSignal(str)
-    error_occurred = pyqtSignal(str)
+    analysis_started = Signal()
+    analysis_completed = Signal(str)
+    analysis_method = Signal(str)
+    error_occurred = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, api_key: str | None = None, parent=None):
         super().__init__(parent)
         self.client = None
         self.vision_available = False
+        self._api_key = api_key or GROQ_API_KEY
         self._init_groq_client()
         logger.info("[ScreenAnalysis] Initialized")
 
     def _init_groq_client(self):
+        if not PIL_AVAILABLE:
+            logger.warning("[ScreenAnalysis] Pillow is unavailable")
+            return
+
         if not GROQ_AVAILABLE:
             logger.warning("[ScreenAnalysis] Groq SDK is unavailable")
             return
 
-        api_key = os.environ.get("GROQ_API_KEY", "")
-        if not api_key or not api_key.startswith("gsk_"):
+        if not self._api_key or not self._api_key.startswith("gsk_"):
             logger.warning("[ScreenAnalysis] GROQ_API_KEY is not configured")
             return
 
         try:
-            self.client = Groq(api_key=api_key)
+            self.client = Groq(api_key=self._api_key)
             self.vision_available = True
             logger.info("[ScreenAnalysis] Groq vision is available")
         except Exception as exc:
@@ -171,8 +168,6 @@ class ScreenAnalysis(QObject):
                 "Screen analysis is unavailable.\nConfigure GROQ_API_KEY to enable it."
             )
             return
-
-        from PyQt5.QtCore import QThreadPool
 
         task = ScreenAnalysisTask(self.client)
         task.signals.started.connect(self._on_started)
@@ -192,38 +187,3 @@ class ScreenAnalysis(QObject):
 
     def _on_method(self, method: str):
         self.analysis_method.emit(method)
-
-
-if __name__ == "__main__":
-    import sys
-
-    from PyQt5.QtCore import QTimer
-    from PyQt5.QtWidgets import QApplication
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    app = QApplication(sys.argv)
-    analyzer = ScreenAnalysis()
-
-    def on_completed(text):
-        print(f"Extracted {len(text)} characters:")
-        print(text[:500] + "..." if len(text) > 500 else text)
-        app.quit()
-
-    def on_error(message):
-        print(f"Error: {message}")
-        app.quit()
-
-    def on_method(method):
-        print(f"Method: {method}")
-
-    analyzer.analysis_completed.connect(on_completed)
-    analyzer.error_occurred.connect(on_error)
-    analyzer.analysis_method.connect(on_method)
-
-    print("Screen Analysis Test")
-    print(f"  Vision available: {analyzer.vision_available}")
-    print("\nCapturing screen in 2s...")
-
-    QTimer.singleShot(2000, analyzer.capture_and_analyze)
-    sys.exit(app.exec_())

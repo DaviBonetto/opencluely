@@ -2,16 +2,24 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 .venv/
 venv/
 env/
+.vscode/
 
 logs/
-opencluely_*.log
+*.log
 
 data/
 quarantine/
+.agent/
 
 .env
 .env.*
+
+Thumbs.db
+.DS_Store

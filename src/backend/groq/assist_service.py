@@ -1,4 +1,4 @@
-"""Opencluely assist service."""
+"""Opencluely assist service powered by Groq."""
 
 from __future__ import annotations
 
@@ -6,10 +6,19 @@ import logging
 import traceback
 from datetime import datetime, timedelta
 
-from PyQt5.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
+
+from ..settings import (
+    GROQ_API_KEY,
+    GROQ_ASSIST_MAX_TOKENS,
+    GROQ_ASSIST_MODEL,
+    GROQ_ASSIST_TEMPERATURE,
+    GROQ_RATE_LIMIT_PER_MINUTE,
+    GROQ_REQUEST_TIMEOUT,
+)
 
 
-logger = logging.getLogger("assist_service")
+logger = logging.getLogger("backend.groq.assist_service")
 
 try:
     from groq import Groq
@@ -20,12 +29,6 @@ except ImportError:
     GROQ_AVAILABLE = False
     logger.warning("Groq SDK is unavailable for Assist")
 
-
-ASSIST_MODEL = "llama-3.3-70b-versatile"
-ASSIST_MAX_TOKENS = 500
-ASSIST_TEMPERATURE = 0.7
-ASSIST_TIMEOUT = 15.0
-RATE_LIMIT = 30
 
 SYSTEM_PROMPT = """You are Opencluely Assist, a live session copilot.
 
@@ -45,16 +48,16 @@ class AssistTask(QRunnable):
     """Runs a single Assist request off the UI thread."""
 
     class Signals(QObject):
-        started = pyqtSignal()
-        finished = pyqtSignal(str)
-        error = pyqtSignal(str)
+        started = Signal()
+        finished = Signal(str)
+        error = Signal(str)
 
     def __init__(
         self,
         client,
         question: str,
         reference_context: str = "",
-        session_context: dict = None,
+        session_context: dict | None = None,
     ):
         super().__init__()
         self.client = client
@@ -63,7 +66,7 @@ class AssistTask(QRunnable):
         self.session_context = session_context or {}
         self.signals = self.Signals()
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         try:
             self.signals.started.emit()
@@ -74,11 +77,7 @@ class AssistTask(QRunnable):
                 "Generate the clearest useful response for what the user should say, type, or do next."
             )
 
-            if self.session_context.get("system_instructions"):
-                system_prompt = self.session_context["system_instructions"]
-                logger.info("[AssistTask] Using profile system instructions")
-            else:
-                system_prompt = SYSTEM_PROMPT
+            system_prompt = self.session_context.get("system_instructions") or SYSTEM_PROMPT
 
             if self.session_context.get("profile_name"):
                 system_prompt += f"\n\nACTIVE PROFILE:\n{self.session_context['profile_name']}"
@@ -90,14 +89,14 @@ class AssistTask(QRunnable):
                 system_prompt += f"\n\nREFERENCE MATERIAL:\n{self.reference_context}"
 
             response = self.client.chat.completions.create(
-                model=ASSIST_MODEL,
+                model=GROQ_ASSIST_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                max_tokens=ASSIST_MAX_TOKENS,
-                temperature=ASSIST_TEMPERATURE,
-                timeout=ASSIST_TIMEOUT,
+                max_tokens=GROQ_ASSIST_MAX_TOKENS,
+                temperature=GROQ_ASSIST_TEMPERATURE,
+                timeout=GROQ_REQUEST_TIMEOUT,
             )
 
             answer = response.choices[0].message.content.strip()
@@ -111,17 +110,17 @@ class AssistTask(QRunnable):
 
 
 class AssistService(QObject):
-    """Coordinates Groq-backed Assist responses with rate limiting."""
+    """Coordinates Groq-backed Assist responses with light rate limiting."""
 
-    answer_ready = pyqtSignal(str)
-    answer_started = pyqtSignal()
-    error_occurred = pyqtSignal(str)
-    rate_limit_hit = pyqtSignal()
+    answer_ready = Signal(str)
+    answer_started = Signal()
+    error_occurred = Signal(str)
+    rate_limit_hit = Signal()
 
-    def __init__(self, api_key: str = None, parent=None):
+    def __init__(self, api_key: str | None = None, parent=None):
         super().__init__(parent)
         self._client = None
-        self._api_key = api_key
+        self._api_key = api_key or GROQ_API_KEY
         self._is_ready = False
         self._is_processing = False
         self._request_count = 0
@@ -129,7 +128,7 @@ class AssistService(QObject):
         self._thread_pool = QThreadPool.globalInstance()
         logger.info("[AssistService] Initialized")
 
-    def initialize(self):
+    def initialize(self) -> bool:
         """Create the Groq client when the API key is available."""
         logger.info("[AssistService] Initializing Groq client")
 
@@ -160,7 +159,7 @@ class AssistService(QObject):
         self,
         question: str,
         reference_context: str = "",
-        session_context: dict = None,
+        session_context: dict | None = None,
     ):
         """Generate a response without blocking the UI thread."""
         if not self._is_ready:
@@ -189,7 +188,7 @@ class AssistService(QObject):
 
     def _check_rate_limit(self) -> bool:
         self._reset_counter_if_needed()
-        return self._request_count < RATE_LIMIT
+        return self._request_count < GROQ_RATE_LIMIT_PER_MINUTE
 
     def _reset_counter_if_needed(self):
         now = datetime.now()
@@ -200,7 +199,11 @@ class AssistService(QObject):
 
     def _on_task_started(self):
         self._request_count += 1
-        logger.info("[AssistService] Requests this minute: %s/%s", self._request_count, RATE_LIMIT)
+        logger.info(
+            "[AssistService] Requests this minute: %s/%s",
+            self._request_count,
+            GROQ_RATE_LIMIT_PER_MINUTE,
+        )
         self.answer_started.emit()
 
     def _on_task_finished(self, answer: str):
@@ -217,44 +220,6 @@ class AssistService(QObject):
     def is_processing(self) -> bool:
         return self._is_processing
 
-    def get_request_count(self) -> tuple:
+    def get_request_count(self) -> tuple[int, int]:
         self._reset_counter_if_needed()
-        return (self._request_count, RATE_LIMIT)
-
-
-if __name__ == "__main__":
-    import os
-    import sys
-
-    from PyQt5.QtCore import QTimer
-    from PyQt5.QtWidgets import QApplication
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("Configure GROQ_API_KEY before running this test")
-        sys.exit(1)
-
-    def on_started():
-        print("Generating Assist response...")
-
-    def on_ready(answer):
-        print(f"\nResponse:\n{answer}\n")
-        app.quit()
-
-    def on_error(message):
-        print(f"Error: {message}")
-        app.quit()
-
-    app = QApplication(sys.argv)
-
-    assist = AssistService(api_key=api_key)
-    assist.initialize()
-    assist.answer_started.connect(on_started)
-    assist.answer_ready.connect(on_ready)
-    assist.error_occurred.connect(on_error)
-    assist.generate_answer("How should I frame a risky API change for a stakeholder update?")
-
-    QTimer.singleShot(30000, app.quit)
-    sys.exit(app.exec_())
+        return (self._request_count, GROQ_RATE_LIMIT_PER_MINUTE)

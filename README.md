@@ -1,34 +1,42 @@
 # Opencluely
 
-Opencluely is a desktop copilot for live sessions. This repository now uses the Opencluely
-product language across Launchpad, Live Bar, Context Vault, Copilot Profiles, Assist, and
-Screen Analysis while preserving the original architecture as a rewrite baseline.
+Opencluely is currently a focused desktop shell prototype built around a floating AI bar.
+The repository has been reduced to the active runtime, the new PySide6 UI, and the
+documentation that still matters for future iterations.
 
-## What This Repository Contains
+## Current Runtime
 
-- `Launchpad` for session launch
-- `Live Bar` for always-on-top session support with transcription and chat
-- `Assist` for Groq-backed response generation
-- `Screen Analysis` for screenshot-based help
-- `Context Vault` prompts and `Context` notes stored locally at runtime
-- `Copilot Profiles` for reusable session behavior presets
+- `main.py` boots the desktop app
+- `src/backend/` preserves the audio capture and Groq backend in an organized package tree
+- `src/ui/floating_bar.py` contains the new source-of-truth UI
+- `src/ui/live_bar.py` keeps the existing import path stable for the app flow
+- `src/runtime/paths.py` centralizes runtime directories for logs and app data outside the repo
+- `assets/fonts/` stores the bundled Inter font used by the shell
 
-## Safety Notes
+## Repository Layout
 
-- Runtime data is written to `data/` and ignored by Git
-- Application logs are written to `logs/` and ignored by Git
-- Provider credentials must come from environment variables
-- Legacy personal context data is quarantined under `quarantine/`
-
-## Runtime Migration Notes
-
-- Saved profile state now lives in `data/copilot_profiles.json`
-- Context notes now live in `data/context_notes.json`
-- Context Vault prompts now live in `data/context_vault.json`
-- Legacy runtime profile ids such as `interview_assistant`, `leetcode_helper`, `sales_assistant`,
-  and `custom` are normalized to `general_copilot`, `problem_solving`, `sales_conversation`, and
-  `custom_profile` during load
-- Legacy runtime profile payloads in `data/templates.json` are migrated forward automatically
+```text
+assets/
+  fonts/                     Bundled Inter font and its upstream license
+docs/
+  Codex_Orchestrator/        Archived planning and implementation packets
+  legal/                     Third-party notices
+  reference-images/          Reference captures used during design work
+main.py                      Desktop bootstrap
+run.bat                      Windows launcher
+scripts/
+  clean_local.ps1            Local cleanup helper for repo caches and stale runtime leftovers
+src/
+  backend/
+    audio_capture/           Audio capture plus local/Groq transcription adapters
+    groq/                    Groq-backed assist and screen analysis services
+    settings.py              Shared backend environment settings
+  runtime/
+    paths.py                 Shared runtime paths for logs and local data
+  ui/
+    floating_bar.py          New floating bar implementation
+    live_bar.py              Compatibility wrapper for the current app flow
+```
 
 ## Quick Start
 
@@ -42,51 +50,46 @@ run.bat
 
 ```powershell
 pip install -r requirements.txt
-$env:GROQ_API_KEY="gsk_your_key_here"
 python main.py
 ```
 
-## Environment Variables
+To work on the restored backend modules:
 
-- `GROQ_API_KEY`: enables transcription, Assist, and Screen Analysis
-- `HUGGINGFACE_API_KEY`: enables Hugging Face vision requests if that path is used
-- `HUGGINGFACE_VISION_MODEL`: optional override for the Hugging Face model name
-- `VISION_TIMEOUT_SECONDS`: optional override for screenshot analysis timeout
-
-## External Dependencies
-
-### Tesseract OCR
-
-Install Tesseract if you want screen OCR support.
-
-- Windows download: https://github.com/UB-Mannheim/tesseract/wiki
-- Typical path: `C:\Program Files\Tesseract-OCR\`
-
-### Audio Loopback Capture
-
-The desktop app expects the Windows-compatible `pyaudiowpatch` package for WASAPI loopback
-capture.
-
-## Project Layout
-
-```text
-main.py                          Desktop bootstrap
-run.bat                          Windows launcher
-src/audio_capture.py             Dual audio capture worker
-src/transcription.py             Local transcription fallback
-src/transcription_groq.py        Groq transcription provider
-src/assist_service.py            Assist response generation
-src/screen_analysis.py           Screen Analysis flow
-src/context_manager.py           Resume and document ingestion
-src/context_notes_manager.py     Context note persistence
-src/context_vault_manager.py     Context Vault prompt persistence
-src/profiles/                    Copilot Profile management
-src/ui/launchpad.py              Launchpad window
-src/ui/live_bar.py               Live Bar shell
+```powershell
+pip install -r requirements-backend.txt
 ```
 
-## Current Position
+Optional:
 
-This codebase still carries legacy implementation debt, but the shipped naming now follows the
-Opencluely system. Future work should keep the new vocabulary stable while decomposing the large
-UI modules and building the full Debrief workflow.
+```powershell
+$env:OPENCLUELY_HOME = "$env:LOCALAPPDATA\Opencluely"
+python main.py
+```
+
+## Local Runtime Files
+
+- Runtime files now live outside the repository by default
+- On Windows the default runtime home is `%LOCALAPPDATA%\Opencluely`
+- Set `OPENCLUELY_HOME` if you want to override that location
+- `quarantine/` remains ignored if you need a private local scratch folder in the repo
+
+## Cleanup Helpers
+
+- Run `powershell -ExecutionPolicy Bypass -File scripts\clean_local.ps1` to remove repo-local
+  caches, stale runtime leftovers, smoke artifacts, and quarantine material without touching
+  tracked source files.
+
+## Docs and Notices
+
+- Planning and archived implementation material lives in [docs/Codex_Orchestrator](docs/Codex_Orchestrator)
+- Visual references live in [docs/reference-images](docs/reference-images)
+- Third-party asset notices live in [docs/legal/THIRD_PARTY_NOTICES.md](docs/legal/THIRD_PARTY_NOTICES.md)
+- Backend restoration notes live in [docs/backend.md](docs/backend.md)
+- The current repository license posture is documented in [LICENSE](LICENSE)
+
+## Status
+
+The repository is intentionally slimmer now: the old PyQt workflow, legacy shell support files,
+and archived reference material have been separated so future work can build directly on the new
+floating bar without dragging old runtime paths behind it. The useful backend pieces now live in
+`src/backend/` as optional modules instead of spreading across the root of `src/`.

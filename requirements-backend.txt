@@ -1,0 +1,9 @@
+-r requirements.txt
+
+# Optional backend stack for audio capture, local transcription, and Groq services.
+groq>=0.18.0
+numpy>=1.26.0
+Pillow>=10.4.0
+scipy>=1.13.0
+faster-whisper>=1.1.0
+pyaudiowpatch>=0.2.12 ; platform_system == "Windows"
