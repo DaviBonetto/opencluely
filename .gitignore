@@ -23,3 +23,7 @@ quarantine/
 
 Thumbs.db
 .DS_Store
+
+tmp/
+barratop.py
+floating_bar_preview*.png
