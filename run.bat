@@ -1,6 +1,9 @@
 @echo off
 chcp 65001 >nul
 setlocal
+set "PYTHONDONTWRITEBYTECODE=1"
+
+if "%OPENCLUELY_HOME%"=="" if defined LOCALAPPDATA set "OPENCLUELY_HOME=%LOCALAPPDATA%\Opencluely"
 
 echo.
 echo =====================================
@@ -16,13 +19,11 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if not exist logs mkdir logs >nul 2>&1
-
 echo Checking desktop dependencies...
-python -c "import PyQt5" >nul 2>&1
+python -B -c "import PySide6" >nul 2>&1
 if %errorlevel% neq 0 (
     echo [INFO] Installing Python dependencies from requirements.txt
-    pip install -r requirements.txt
+    python -m pip install -r requirements.txt
     if %errorlevel% neq 0 (
         echo [ERROR] Dependency installation failed.
         pause
@@ -30,25 +31,11 @@ if %errorlevel% neq 0 (
     )
 )
 
-tesseract --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [WARN] Tesseract was not found. Screenshot OCR will stay disabled.
-    echo        Download from https://github.com/UB-Mannheim/tesseract/wiki
-    echo.
-)
-
-if "%GROQ_API_KEY%"=="" (
-    echo [WARN] GROQ_API_KEY is not configured.
-    echo        Live transcription and Assist responses will be unavailable.
-    echo        Create a key at https://console.groq.com/keys
-    echo.
-)
-
 echo Launching Opencluely...
-echo Logs will be written to the logs\ directory.
+if defined OPENCLUELY_HOME echo Runtime files will be written under: %OPENCLUELY_HOME%
 echo.
 
-python main.py
+python -B main.py
 
 echo.
 echo Application finished.

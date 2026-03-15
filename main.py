@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from pathlib import Path
 
+
+sys.dont_write_bytecode = True
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -14,7 +15,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from storage_paths import build_log_file
+from runtime.paths import build_log_file, get_app_home
 
 
 LOG_FILE = build_log_file("opencluely")
@@ -32,15 +33,14 @@ logger = logging.getLogger("main")
 
 
 def load_brand_fonts(app) -> None:
-    """Load bundled brand fonts so the wordmark stays stable across machines."""
+    """Load bundled brand fonts so the floating bar uses Inter when available."""
     try:
-        from PyQt5.QtGui import QFont, QFontDatabase
+        from PySide6.QtGui import QFont, QFontDatabase
     except ImportError:
-        logger.warning("PyQt5 font helpers are unavailable; skipping bundled font loading")
+        logger.warning("PySide6 font helpers are unavailable; skipping bundled font loading")
         return
 
-    fonts_dir = PROJECT_ROOT / "assets" / "fonts"
-    font_path = fonts_dir / "InterVariable.ttf"
+    font_path = PROJECT_ROOT / "assets" / "fonts" / "InterVariable.ttf"
     font_family = "Inter"
 
     if font_path.exists():
@@ -61,39 +61,25 @@ def load_brand_fonts(app) -> None:
 
 
 def check_environment() -> bool:
-    """Validate a minimal runtime environment before booting the UI."""
+    """Validate the minimal runtime required for the floating bar."""
     logger.info("Checking runtime environment")
     logger.info("Python: %s", sys.version)
 
     try:
-        from PyQt5.QtCore import QT_VERSION_STR
+        from PySide6 import __version__ as pyside_version
+        from PySide6.QtCore import qVersion
 
-        logger.info("PyQt5: %s", QT_VERSION_STR)
+        logger.info("PySide6: %s", pyside_version)
+        logger.info("Qt: %s", qVersion())
     except ImportError:
-        logger.error("PyQt5 is not installed. Run: pip install -r requirements.txt")
+        logger.error("PySide6 is not installed. Run: pip install -r requirements.txt")
         return False
-
-    api_key = os.environ.get("GROQ_API_KEY", "")
-    if api_key.startswith("gsk_"):
-        logger.info("GROQ_API_KEY is configured")
-    else:
-        logger.warning(
-            "GROQ_API_KEY is missing; transcription, Assist, and Screen Analysis will be disabled"
-        )
-
-    try:
-        import pytesseract
-
-        pytesseract.get_tesseract_version()
-        logger.info("Tesseract is available")
-    except Exception:
-        logger.warning("Tesseract is not available; screen OCR will be disabled")
 
     return True
 
 
 def main() -> int:
-    """Create the Qt app and launch the Live Bar immediately."""
+    """Create the Qt app and launch the floating bar."""
     print()
     print("=" * 50)
     print("  Opencluely")
@@ -101,6 +87,7 @@ def main() -> int:
     print()
 
     logger.info("=== Opencluely starting ===")
+    logger.info("Runtime home: %s", get_app_home())
     logger.info("Log file: %s", LOG_FILE)
 
     try:
@@ -108,32 +95,39 @@ def main() -> int:
             print("\nEnvironment check failed. Review the log file for details.")
             return 1
 
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QApplication
         from ui.live_bar import LiveBar
 
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+        if hasattr(Qt.ApplicationAttribute, "AA_UseHighDpiPixmaps"):
+            QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
 
         app = QApplication(sys.argv)
+        app.setStyle("Fusion")
         app.setApplicationName("Opencluely")
         app.setApplicationVersion("1.0.0")
         app.setQuitOnLastWindowClosed(True)
         load_brand_fonts(app)
-        session_context = {
-            "profile_name": "Before Meeting",
-            "brief_name": "General",
-            "system_instructions": "",
-            "user_context": "",
-            "language": "pt-BR",
-        }
 
-        overlay = LiveBar(session_context)
+        overlay = LiveBar(
+            {
+                "profile_name": "Before Meeting",
+                "brief_name": "General",
+                "system_instructions": "",
+                "user_context": "",
+                "language": "pt-BR",
+            }
+        )
+        screen = app.primaryScreen().availableGeometry()
+        overlay.move(
+            screen.x() + (screen.width() - overlay.width()) // 2,
+            screen.y() + 80,
+        )
         overlay.show()
         app.overlay = overlay
 
         logger.info("Entering Qt event loop")
-        return app.exec_()
+        return app.exec()
 
     except ImportError as exc:
         logger.critical("Import error during bootstrap", exc_info=True)
