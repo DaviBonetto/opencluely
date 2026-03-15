@@ -69,48 +69,114 @@ src/
     live_bar.py              Compatibility wrapper for the current app flow
 ```
 
+## Tech Stack
+
+- **Language**: Python 3.13
+- **Desktop UI**: PySide6 / Qt
+- **Realtime STT**: Gemini Live and Groq Whisper
+- **Fallback STT**: local faster-whisper adapter
+- **Vision Context**: Gemini and Groq multimodal analyzers
+- **Runtime Storage**: local files outside the repository root
+
 ## Quick Start
 
-### Windows
-
-```bat
-run.bat
-```
-
-### Manual
+### 1. Install the core desktop runtime
 
 ```powershell
 pip install -r requirements.txt
-python main.py
 ```
 
-To work on the restored backend modules:
+### 2. Install the optional backend providers
 
 ```powershell
 pip install -r requirements-backend.txt
 ```
 
-Useful provider env vars:
+### 3. Configure provider keys
 
 ```powershell
 $env:GROQ_API_KEY = "..."
 $env:GEMINI_API_KEY = "..."
-$env:OPENCLUELY_STT_PROVIDER = "auto"
-$env:OPENCLUELY_AUDIO_SOURCE = "auto"
+$env:GEMINI_ASSIST_API_KEY = "..."
 ```
 
-Optional:
+If `GEMINI_ASSIST_API_KEY` is omitted, chat falls back to `GEMINI_API_KEY`.
+
+### 4. Launch Opencluely
+
+#### Windows launcher
+
+```bat
+run.bat
+```
+
+#### Manual bootstrap
 
 ```powershell
-$env:OPENCLUELY_HOME = "$env:LOCALAPPDATA\Opencluely"
 python main.py
 ```
 
-## Local Runtime Files
+## Configuration
+
+### Common environment variables
+
+```powershell
+$env:GROQ_API_KEY = "..."
+$env:GEMINI_API_KEY = "..."
+$env:GEMINI_ASSIST_API_KEY = "..."
+$env:OPENCLUELY_STT_PROVIDER = "auto"
+$env:OPENCLUELY_ASSIST_PROVIDER = "auto"
+$env:OPENCLUELY_AUDIO_SOURCE = "auto"
+$env:OPENCLUELY_HOME = "$env:LOCALAPPDATA\Opencluely"
+```
+
+### Provider values
+
+- `OPENCLUELY_STT_PROVIDER`: `auto`, `gemini`, `groq`, `local`
+- `OPENCLUELY_ASSIST_PROVIDER`: `auto`, `gemini`, `groq`, `local`
+- `OPENCLUELY_AUDIO_SOURCE`: `auto`, `microphone`, `loopback`, `mixed`
+
+### Runtime defaults
+
+- STT defaults to `auto`
+- Assistant defaults to `auto`
+- Audio source defaults to `auto`
+- Runtime home defaults to `%LOCALAPPDATA%\Opencluely`
+
+## Provider Strategy
+
+- **Chat**: Gemini is the preferred assistant backend when configured
+- **Live transcription**: `auto` prefers Gemini Live first, then Groq
+- **Audio source**: `auto` prefers mixed capture when microphone and loopback are both available
+- **Screen context**: Gemini vision is preferred, with Groq as fallback
+
+## Validation
+
+### Focused backend tests
+
+```powershell
+python -m unittest discover -s tests/backend -p "test_*.py"
+```
+
+### UI smoke tests
+
+```powershell
+python -m unittest discover -s tests/ui -p "test_*.py"
+```
+
+### Lightweight syntax verification
+
+```powershell
+python -m compileall src
+```
+
+## Runtime Files And Logs
 
 - Runtime files now live outside the repository by default
 - On Windows the default runtime home is `%LOCALAPPDATA%\Opencluely`
 - Set `OPENCLUELY_HOME` if you want to override that location
+- Logs are written under `%LOCALAPPDATA%\Opencluely\logs`
+- Persisted sessions and screenshots are stored under the runtime data directory
 - `quarantine/` remains ignored if you need a private local scratch folder in the repo
 
 ## Cleanup Helpers
@@ -118,6 +184,29 @@ python main.py
 - Run `powershell -ExecutionPolicy Bypass -File scripts\clean_local.ps1` to remove repo-local
   caches, stale runtime leftovers, smoke artifacts, and quarantine material without touching
   tracked source files.
+
+## Troubleshooting
+
+### The app starts but a provider is unavailable
+
+- Confirm the corresponding API key is set in the current shell
+- Open the floating bar options menu and check provider readiness lines
+- Review the latest log file under `%LOCALAPPDATA%\Opencluely\logs`
+
+### Groq returns `429`
+
+- Prefer `auto` or Gemini Live for sustained realtime transcription
+- Keep Groq for fallback or lower-frequency chunk transcription scenarios
+
+### Gemini Live stops or reconnects
+
+- Check the latest runtime log for websocket or session errors
+- Restart listening from the options menu after updating environment variables
+
+### The workspace shows local clutter again
+
+- Run `scripts\clean_local.ps1`
+- Keep separate scratch projects outside the repository root when possible
 
 ## Docs and Notices
 
